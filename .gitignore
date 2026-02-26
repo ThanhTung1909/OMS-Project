@@ -1,0 +1,17 @@
+# Java
+target/
+*.class
+.mvn/
+mvnw
+mvnw.cmd
+.idea/
+*.iml
+
+# Node
+node_modules/
+dist/
+.env
+
+# OS
+.DS_Store
+Thumbs.db

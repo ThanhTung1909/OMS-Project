@@ -1,0 +1,18 @@
+server:
+  port: 8085
+spring:
+  application:
+    name: delivery-service
+  datasource:
+    url: jdbc:mariadb://localhost:3306/db_delivery
+    username: root
+    password: root
+    driver-class-name: org.mariadb.jdbc.Driver
+jpa:
+  hibernate:
+    ddl-auto: update
+  show-sql: true
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/

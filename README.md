@@ -24,6 +24,7 @@ Bước 1: Clone dự án
 Bước 2: Khởi chạy Hạ tầng (Infrastructure)
 # Tại thư mục gốc của dự án
 - docker-compose up -d
+* (docker-compose up -d mariadb redis rabbitmq discovery-server api-gateway)
 - Chờ khoảng 1-2 phút để MariaDB khởi tạo 6 databases và RabbitMQ sẵn sàng.
     +  Check Eureka: http://localhost:8761 (Phải thấy các service list)
     +  Check RabbitMQ: http://localhost:15672 (User/Pass: user/password)

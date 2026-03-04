@@ -8,11 +8,14 @@ spring:
         username: root
         password: root
         driver-class-name: org.mariadb.jdbc.Driver
-jpa:
-    hibernate:
-        ddl-auto: update
-    show-sql: true
+    jpa:
+        hibernate:
+            ddl-auto: update
+        show-sql: true
 eureka:
     client:
         service-url:
             defaultZone: http://localhost:8761/eureka/
+jwt:
+  secret: "oms-super-secret-key-project-kien-truc-phan-mem-2026-xyz123"
+  expiration: 86400000 

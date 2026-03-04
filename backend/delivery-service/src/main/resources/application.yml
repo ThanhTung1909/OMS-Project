@@ -8,10 +8,15 @@ spring:
     username: root
     password: root
     driver-class-name: org.mariadb.jdbc.Driver
-jpa:
-  hibernate:
-    ddl-auto: update
-  show-sql: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: user
+    password: password
 eureka:
   client:
     service-url:

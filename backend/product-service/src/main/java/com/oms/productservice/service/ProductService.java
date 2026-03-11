@@ -78,6 +78,14 @@ public class ProductService {
         return mapToProductResponse(updatedProduct);
     }
 
+    public void deleteProduct(String id){
+        if(!productrepo.existsById(id)){
+            throw new RuntimeException("Product not found");
+        }
+
+        productrepo.deleteById(id);
+    }
+
 
 
 

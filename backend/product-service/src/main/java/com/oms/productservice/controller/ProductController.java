@@ -3,6 +3,7 @@ package com.oms.productservice.controller;
 import com.oms.productservice.dto.productDTO.ProductRequest;
 import com.oms.productservice.dto.productDTO.ProductResponse;
 import com.oms.productservice.service.ProductService;
+import jakarta.ws.rs.Path;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +36,11 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<ProductResponse> updateProduct(@PathVariable String id, @RequestBody ProductRequest request){
         return ResponseEntity.ok(productService.updateProduct(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteProduct(@PathVariable String id){
+        return  ResponseEntity.ok("Product deleted successfully");
     }
 
 }

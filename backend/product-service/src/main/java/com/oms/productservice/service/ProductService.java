@@ -9,6 +9,9 @@ import com.oms.productservice.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class ProductService {
@@ -31,6 +34,18 @@ public class ProductService {
 
         Product saveProduct = productrepo.save(product);
         return mapToProductResponse(saveProduct);
+    }
+
+    public List<ProductResponse> getAllProducts() {
+        List<Product> products = productrepo.findAll();
+
+        return products.stream().map((this::mapToProductResponse)).collect(Collectors.toList());
+    }
+
+    public  ProductResponse getProductById(String id){
+        Product product = productrepo.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+
+        return mapToProductResponse(product);
     }
 
     private ProductResponse mapToProductResponse(Product product){

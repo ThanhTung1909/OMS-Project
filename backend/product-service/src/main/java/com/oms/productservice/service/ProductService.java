@@ -62,6 +62,22 @@ public class ProductService {
                 .build();
     }
 
+    public ProductResponse updateProduct(String id, ProductRequest request){
+        Product product = productrepo.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+
+        Category category = categoryRepo.findById(request.getCategoryId()).orElseThrow(() -> new RuntimeException("Category not found"));
+
+        product.setName(request.getName());
+        product.setDescription(request.getDescription());
+        product.setPrice(request.getPrice());
+        product.setSku(request.getSku());
+        product.setImageUrl(request.getImageUrl());
+        product.setCategory(category);
+
+        Product updatedProduct = productrepo.save(product);
+        return mapToProductResponse(updatedProduct);
+    }
+
 
 
 

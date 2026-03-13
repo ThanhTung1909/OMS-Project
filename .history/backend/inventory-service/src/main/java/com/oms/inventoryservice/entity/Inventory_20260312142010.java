@@ -35,7 +35,7 @@ public class Inventory {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @Version // dùng để quản lý phiên bản của thực thể, giúp tránh xung đột khi nhiều người dùng cùng cập nhật một bản ghi
+    @Version
     private Long version;
 
     @PrePersist

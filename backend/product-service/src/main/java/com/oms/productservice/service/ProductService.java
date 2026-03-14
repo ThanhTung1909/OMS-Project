@@ -85,6 +85,13 @@ public class ProductService {
 
         productrepo.deleteById(id);
     }
+    public List<ProductResponse> findByName(String name){
+        if(name.isEmpty()){
+            throw  new RuntimeException("name khong de trong");
+        }
+        List<Product> products = productrepo.findProductsByNameContainsIgnoreCase(name);
+        return products.stream().map((this::mapToProductResponse)).collect(Collectors.toList());
+    }
 
 
 

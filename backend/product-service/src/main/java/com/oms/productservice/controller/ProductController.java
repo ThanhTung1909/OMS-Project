@@ -43,4 +43,9 @@ public class ProductController {
         return  ResponseEntity.ok("Product deleted successfully");
     }
 
+    @PostMapping("/findByName")
+    public ResponseEntity<List<ProductResponse>> findByname(@RequestBody String name){
+        return ResponseEntity.ok(productService.findByName(name));
+    }
+
 }

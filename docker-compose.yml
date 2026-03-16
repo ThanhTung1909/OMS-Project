@@ -1,0 +1,215 @@
+version: "3.8"
+
+services:
+  # --- Database Service ---
+  mariadb:
+    image: mariadb:10.6
+    platform: linux/amd64
+    container_name: oms-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./docker/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - oms-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  # --- Cache Service ---
+  redis:
+    image: redis:alpine
+    container_name: oms-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - oms-network
+
+  # --- RabbitMQ ---
+  rabbitmq:
+    image: rabbitmq:4.2.2-management-alpine
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - oms-network
+
+  # --- Platform services
+  discovery-server:
+    build: ./backend/discovery-server
+    container_name: oms-discovery
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - oms-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  api-gateway:
+    build: ./backend/api-gateway
+    container_name: oms-gateway
+    ports:
+      - "8888:8888"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      - discovery-server
+    networks:
+      - oms-network
+
+  # --- Business Microservices
+  identity-service:
+    build: ./backend/identity-service
+    container_name: oms-identity
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/db_identity
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    networks:
+      - oms-network
+
+  product-service:
+    build: ./backend/product-service
+    container_name: oms-product
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/db_product
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    networks:
+      - oms-network
+
+  inventory-service:
+    build: ./backend/inventory-service
+    container_name: oms-inventory
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/db_inventory
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=user
+      - SPRING_RABBITMQ_PASSWORD=password
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    networks:
+      - oms-network
+
+  order-service:
+    build: ./backend/order-service
+    container_name: oms-order
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/db_order
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=user
+      - SPRING_RABBITMQ_PASSWORD=password
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    networks:
+      - oms-network
+  payment-service:
+    build: ./backend/payment-service
+    container_name: oms-payment
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/db_payment
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=user
+      - SPRING_RABBITMQ_PASSWORD=password
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    networks:
+      - oms-network
+
+  notification-service:
+    build: ./backend/notification-service
+    container_name: oms-notification
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/db_notification
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=user
+      - SPRING_RABBITMQ_PASSWORD=password
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    networks:
+      - oms-network
+
+  delivery-service:
+    build: ./backend/delivery-service
+    container_name: oms-delivery
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/db_delivery
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=user
+      - SPRING_RABBITMQ_PASSWORD=password
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    networks:
+      - oms-network
+
+networks:
+  oms-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:

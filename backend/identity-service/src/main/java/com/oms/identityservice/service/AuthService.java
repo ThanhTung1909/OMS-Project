@@ -11,6 +11,8 @@ import com.oms.identityservice.entity.User;
 import com.oms.identityservice.repository.AccountRepository;
 import com.oms.identityservice.repository.UserRepository;
 import com.oms.identityservice.security.JwtUtil;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,46 +20,34 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 @Service
-
+@RequiredArgsConstructor
 public class AuthService {
 
     @Autowired
     AccountRepository accountRepository;
-
     @Autowired
     UserRepository userRepository;
-
     @Autowired
     PasswordEncoder encoder;
-
     @Autowired
     JwtUtil jwt;
 
+    @Transactional
     public void register(RegisterRequest r){
 
         User user=new User();
-
-        user.setFullName(r.fullName);
-
+        user.setFullName(r.getFullName());
         user.setCreatedAt(LocalDateTime.now());
 
-        userRepository.save(user);
+        user = userRepository.save(user);
 
         Account acc=new Account();
-
-        acc.setUsername(r.username);
-
-        acc.setPasswordHash(
-                encoder.encode(r.password));
-
-        acc.setEmail(r.email);
-
+        acc.setUsername(r.getUsername());
+        acc.setPasswordHash(encoder.encode(r.getPassword()));
+        acc.setEmail(r.getEmail());
         acc.setRole(Role.USER);
-
         acc.setStatus(AccountStatus.ACTIVE);
-
         acc.setCreatedAt(LocalDateTime.now());
-
         acc.setUser(user);
 
         accountRepository.save(acc);
@@ -66,30 +56,20 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest r){
 
-        Account acc=
-                accountRepository
-                        .findByUsername(r.username)
-                        .orElseThrow();
+        Account acc= accountRepository
+                        .findByUsername(r.getUsername())
+                        .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
 
-        if(!encoder.matches(
-                r.password,
-                acc.getPasswordHash()))
+        if(!encoder.matches(r.getPassword(), acc.getPasswordHash()))
+            throw new RuntimeException("Sai mật khẩu");
 
-            throw new RuntimeException();
+        String token= jwt.generateToken(acc);
 
-        String token=
-                jwt.generateToken(acc);
+        AuthResponse res= new AuthResponse();
 
-        AuthResponse res=
-                new AuthResponse();
-
-        res.token=token;
-
-        res.username=
-                acc.getUsername();
-
-        res.role=
-                acc.getRole();
+        res.setToken(token);
+        res.setUsername(acc.getUsername());
+        res.setRole(acc.getRole());
 
         return res;
 

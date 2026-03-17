@@ -14,29 +14,21 @@ import java.util.Date;
 public class JwtUtil {
 
     @Value("${jwt.secret}")
-
     private String secret;
+
+    @Value("${jwt.expiration}")
+    private long expiration;
+
 
     public String generateToken(Account acc){
 
         return Jwts.builder()
-
                 .setSubject(acc.getUsername())
-
-                .claim("role",
-                        acc.getRole().name())
-
+                .claim("role", acc.getRole().name())
+                .claim("userId", acc.getUser().getId())
                 .setIssuedAt(new Date())
-
-                .setExpiration(
-                        new Date(
-                                System.currentTimeMillis()
-                                        +86400000))
-
-                .signWith(
-                        Keys.hmacShaKeyFor(
-                                secret.getBytes()))
-
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(Keys.hmacShaKeyFor(secret.getBytes()))
                 .compact();
 
     }

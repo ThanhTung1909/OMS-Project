@@ -2,7 +2,7 @@ package com.oms.paymentservice.dto;
 
 public record PaymentEvent(
         String orderId,
-        String status,
+        String paymentStatus,
         String transactionId
 ) {
 }

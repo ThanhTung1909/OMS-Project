@@ -1,6 +1,6 @@
 package com.oms.paymentservice.entity;
 
 public enum PaymentStatus {
-    SUCCESS,
+    COMPLETED,
     FAILED
 }

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class PaymentService {
@@ -26,8 +27,9 @@ public class PaymentService {
 
     @Transactional
     public PaymentResponse pay(PaymentRequest request) {
-        boolean isSuccess = Math.random() < 0.8;
-        PaymentStatus dbStatus = isSuccess ? PaymentStatus.SUCCESS : PaymentStatus.FAILED;
+        int randomPercent = ThreadLocalRandom.current().nextInt(100);
+        boolean isSuccess = randomPercent < 80;
+        PaymentStatus dbStatus = isSuccess ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
 
         String transactionId = UUID.randomUUID().toString();
 
@@ -38,7 +40,7 @@ public class PaymentService {
         payment.setTransactionId(transactionId);
         paymentRepository.save(payment);
 
-        String eventStatus = isSuccess ? "SUCCESS" : "FAIL";
+        String eventStatus = dbStatus.name();
         PaymentEvent paymentEvent = new PaymentEvent(request.orderId(), eventStatus, transactionId);
         rabbitTemplate.convertAndSend(
                 RabbitMqConfig.PAYMENT_EXCHANGE,

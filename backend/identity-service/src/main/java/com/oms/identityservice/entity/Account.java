@@ -40,9 +40,5 @@ public class Account {
 
     private LocalDateTime updatedAt;
 
-    @OneToOne
-    @JoinColumn(name="user_id")
-
-    private User user;
 
 }

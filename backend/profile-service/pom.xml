@@ -63,15 +63,18 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- 7. Môi trường Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
+ 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <!-- Quản lý phiên bản cho Spring Cloud (Lấy từ cấu hình của bạn) -->
     <dependencyManagement>
         <dependencies>
             <dependency>

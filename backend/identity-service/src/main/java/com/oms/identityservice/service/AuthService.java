@@ -1,19 +1,19 @@
 package com.oms.identityservice.service;
 
 
+import com.oms.identityservice.dto.AccountCreatedEvent;
 import com.oms.identityservice.dto.AuthResponse;
 import com.oms.identityservice.dto.LoginRequest;
 import com.oms.identityservice.dto.RegisterRequest;
 import com.oms.identityservice.entity.Account;
 import com.oms.identityservice.entity.Enum.AccountStatus;
 import com.oms.identityservice.entity.Enum.Role;
-import com.oms.identityservice.entity.User;
 import com.oms.identityservice.repository.AccountRepository;
-import com.oms.identityservice.repository.UserRepository;
 import com.oms.identityservice.security.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -23,23 +23,25 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AuthService {
 
-    @Autowired
-    AccountRepository accountRepository;
-    @Autowired
-    UserRepository userRepository;
-    @Autowired
-    PasswordEncoder encoder;
-    @Autowired
-    JwtUtil jwt;
+    private final AccountRepository accountRepository;
+    private final PasswordEncoder encoder;
+    private final JwtUtil jwt;
+    private final RabbitTemplate rabbitTemplate;
 
     @Transactional
     public AuthResponse register(RegisterRequest r){
 
-        User user=new User();
-        user.setFullName(r.getFullName());
-        user.setCreatedAt(LocalDateTime.now());
+        if(!r.getPassword().equals(r.getConfirmPassword())){
+            throw new RuntimeException("Mật khẩu nhập lại không khớp với mật khẩu đã nhập");
+        }
 
-        user = userRepository.save(user);
+        if(accountRepository.findByUsername(r.getUsername()).isPresent()){
+            throw new RuntimeException("Tên đăng nhập này đã tồn tại trên hệ thống");
+        }
+
+        if(accountRepository.findByEmail(r.getEmail()).isPresent()){
+            throw new RuntimeException("Email này đã được sử dụng bởi một tài khoản khác");
+        }
 
         Account acc=new Account();
         acc.setUsername(r.getUsername());
@@ -48,9 +50,20 @@ public class AuthService {
         acc.setRole(Role.USER);
         acc.setStatus(AccountStatus.ACTIVE);
         acc.setCreatedAt(LocalDateTime.now());
-        acc.setUser(user);
+        
+        acc = accountRepository.save(acc);
 
-        accountRepository.save(acc);
+        // Bắn tin nhắn sang profile service
+        AccountCreatedEvent event = AccountCreatedEvent.builder()
+            .accountId(acc.getId())
+            .userName(acc.getUsername())
+            .email(acc.getEmail())
+            .fullname(r.getFullName())
+            .role(acc.getRole().name())
+            .phone(r.getPhone())
+            .build();
+
+        rabbitTemplate.convertAndSend("account.created.queue", event);
 
         return loginAfterRegister(acc);
 
@@ -67,27 +80,23 @@ public class AuthService {
 
         String token= jwt.generateToken(acc);
 
-        AuthResponse res= new AuthResponse();
-
+        AuthResponse res = new AuthResponse();
         res.setToken(token);
         res.setUsername(acc.getUsername());
-        res.setRole(acc.getRole());
-        res.setUserId(acc.getUser().getId());
-        res.setFullName(acc.getUser().getFullName());
+        res.setRole(acc.getRole().name());
+        res.setAccountId(acc.getId());
         res.setEmail(acc.getEmail());
 
         return res;
-
     }
 
   private AuthResponse loginAfterRegister(Account acc) {
         String token = jwt.generateToken(acc);
         AuthResponse res = new AuthResponse();
         res.setToken(token);
+        res.setAccountId(acc.getId());
         res.setUsername(acc.getUsername());
-        res.setRole(acc.getRole().USER);
-        res.setUserId(acc.getUser().getId());
-        res.setFullName(acc.getUser().getFullName());
+        res.setRole(acc.getRole().name());
         res.setEmail(acc.getEmail());
         return res;
     }

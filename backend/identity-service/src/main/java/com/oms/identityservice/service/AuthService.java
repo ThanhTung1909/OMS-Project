@@ -33,7 +33,7 @@ public class AuthService {
     JwtUtil jwt;
 
     @Transactional
-    public void register(RegisterRequest r){
+    public AuthResponse register(RegisterRequest r){
 
         User user=new User();
         user.setFullName(r.getFullName());
@@ -51,6 +51,8 @@ public class AuthService {
         acc.setUser(user);
 
         accountRepository.save(acc);
+
+        return loginAfterRegister(acc);
 
     }
 
@@ -70,9 +72,24 @@ public class AuthService {
         res.setToken(token);
         res.setUsername(acc.getUsername());
         res.setRole(acc.getRole());
+        res.setUserId(acc.getUser().getId());
+        res.setFullName(acc.getUser().getFullName());
+        res.setEmail(acc.getEmail());
 
         return res;
 
+    }
+
+  private AuthResponse loginAfterRegister(Account acc) {
+        String token = jwt.generateToken(acc);
+        AuthResponse res = new AuthResponse();
+        res.setToken(token);
+        res.setUsername(acc.getUsername());
+        res.setRole(acc.getRole().USER);
+        res.setUserId(acc.getUser().getId());
+        res.setFullName(acc.getUser().getFullName());
+        res.setEmail(acc.getEmail());
+        return res;
     }
 
 }

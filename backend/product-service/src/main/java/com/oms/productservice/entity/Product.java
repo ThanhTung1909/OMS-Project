@@ -36,6 +36,7 @@ public class Product {
             name = "hinh_anh",
             joinColumns = @JoinColumn(name = "product_id")
     )
+    @Column(name = "image_url")
     private List<String> imageUrl;
 
     @CreationTimestamp

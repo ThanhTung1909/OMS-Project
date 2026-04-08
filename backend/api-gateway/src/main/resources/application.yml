@@ -1,67 +1,71 @@
 server:
-    port: 8888
+  port: 8888
 spring:
-    application:
-        name: api-gateway
-    cloud:
-        gateway:
-            discovery:
-                locator:
-                    enabled: true 
-            globalcors:
-              corsConfigurations:
-                '[/**]':
-                  allowedOrigins: 
-                    - "http://localhost:3000" 
-                    - "http://127.0.0.1:3000"
-                  allowedMethods:
-                    - GET
-                    - POST
-                    - PUT
-                    - DELETE
-                    - PATCH
-                    - OPTIONS
-                  allowedHeaders: "*"
-                  allowCredentials: true
-            routes:
-                - id: identity-service
-                  uri: lb://identity-service
-                  predicates:
-                    - Path=/api/v1/auth/**, /api/v1/users/**
-                - id: order-service
-                  uri: lb://order-service
-                  predicates:
-                    - Path=/api/v1/orders/**
-                - id: product-service
-                  uri: lb://product-service
-                  predicates:
-                    - Path=/api/v1/products/**
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      globalcors:
+        corsConfigurations:
+          "[/**]":
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://127.0.0.1:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+      routes:
+        - id: identity-service
+          uri: lb://identity-service
+          predicates:
+            - Path=/api/v1/auth/**
+        - id: profile-service
+          uri: lb://profile-service
+          predicates:
+            - Path=/api/v1/customers/**, /api/v1/staff/**
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/v1/orders/**
+        - id: product-service
+          uri: lb://product-service
+          predicates:
+            - Path=/api/v1/products/**
 
-                - id: inventory-service
-                  uri: lb://inventory-service
-                  predicates:
-                    - Path=/api/v1/inventory/**
+        - id: inventory-service
+          uri: lb://inventory-service
+          predicates:
+            - Path=/api/v1/inventory/**
 
-                - id: payment-service
-                  uri: lb://payment-service
-                  predicates:
-                    - Path=/api/v1/payments/**
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/v1/payments/**
 
-                - id: delivery-service
-                  uri: lb://delivery-service
-                  predicates:
-                    - Path=/api/v1/deliveries/**
+        - id: delivery-service
+          uri: lb://delivery-service
+          predicates:
+            - Path=/api/v1/deliveries/**
 
-                - id: notification-service
-                  uri: lb://notification-service
-                  predicates:
-                    - Path=/api/v1/notifications/**
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/v1/notifications/**
 eureka:
-    client:
-        service-url:
-            defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
-    instance:
-        prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
 jwt:
   secret: "oms-super-secret-key-project-kien-truc-phan-mem-2026-xyz123"
   expiration: 86400000

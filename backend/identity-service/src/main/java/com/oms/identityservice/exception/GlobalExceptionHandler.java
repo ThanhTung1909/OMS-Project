@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.oms.identityservice.dto.ErrorResponse;
+import com.oms.identityservice.entity.Enum.ErrorCode;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -36,15 +37,19 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
-    // 2. Bắt các lỗi nghiệp vụ (Ví dụ: Tài khoản đã tồn tại)
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ErrorResponse> handleRuntimeExceptions(RuntimeException ex) {
+    
+    @ExceptionHandler(AppException.class)
+    public ResponseEntity<ErrorResponse> handleAppException(AppException ex) {
+        ErrorCode errorCode = ex.getErrorCode();
+        
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .message(ex.getMessage())
+                .status(errorCode.getCode()) 
+                .message(errorCode.getMessage())
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        return ResponseEntity
+                .status(errorCode.getCode())
+                .body(errorResponse);
     }
 }

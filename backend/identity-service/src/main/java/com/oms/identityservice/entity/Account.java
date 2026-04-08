@@ -10,12 +10,16 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
 @Entity
 @Table(name="accounts")
 
 @Getter
 @Setter
-
+@EntityListeners(AuditingEntityListener.class)
 public class Account {
 
     @Id
@@ -36,8 +40,11 @@ public class Account {
     @Enumerated(EnumType.STRING)
     private AccountStatus status;
 
+    @CreatedDate
+    @Column(updatable = false)
     private LocalDateTime createdAt;
 
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 
 

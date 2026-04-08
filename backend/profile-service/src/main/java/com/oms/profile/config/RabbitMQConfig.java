@@ -1,4 +1,4 @@
-package com.oms.identityservice.config;
+package com.oms.profile.config;
 
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;

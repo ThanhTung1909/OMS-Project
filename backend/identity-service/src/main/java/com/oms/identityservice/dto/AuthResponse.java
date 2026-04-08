@@ -1,6 +1,5 @@
 package com.oms.identityservice.dto;
 
-import com.oms.identityservice.entity.Enum.Role;
 import lombok.Getter;
 import lombok.Setter;
 

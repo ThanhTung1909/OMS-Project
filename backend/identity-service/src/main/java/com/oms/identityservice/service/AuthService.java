@@ -7,11 +7,14 @@ import com.oms.identityservice.dto.LoginRequest;
 import com.oms.identityservice.dto.RegisterRequest;
 import com.oms.identityservice.entity.Account;
 import com.oms.identityservice.entity.Enum.AccountStatus;
+import com.oms.identityservice.entity.Enum.ErrorCode;
 import com.oms.identityservice.entity.Enum.Role;
+import com.oms.identityservice.exception.AppException;
 import com.oms.identityservice.repository.AccountRepository;
 import com.oms.identityservice.security.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +24,7 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final AccountRepository accountRepository;
@@ -32,16 +36,17 @@ public class AuthService {
     public AuthResponse register(RegisterRequest r){
 
         if(!r.getPassword().equals(r.getConfirmPassword())){
-            throw new RuntimeException("Mật khẩu nhập lại không khớp với mật khẩu đã nhập");
+            throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
 
         if(accountRepository.findByUsername(r.getUsername()).isPresent()){
-            throw new RuntimeException("Tên đăng nhập này đã tồn tại trên hệ thống");
+            throw new AppException(ErrorCode.USER_EXISTED); 
         }
 
         if(accountRepository.findByEmail(r.getEmail()).isPresent()){
-            throw new RuntimeException("Email này đã được sử dụng bởi một tài khoản khác");
+            throw new AppException(ErrorCode.EMAIL_EXISTED); 
         }
+
 
         Account acc=new Account();
         acc.setUsername(r.getUsername());
@@ -49,12 +54,12 @@ public class AuthService {
         acc.setEmail(r.getEmail());
         acc.setRole(Role.USER);
         acc.setStatus(AccountStatus.ACTIVE);
-        acc.setCreatedAt(LocalDateTime.now());
         
         acc = accountRepository.save(acc);
 
         // Bắn tin nhắn sang profile service
-        AccountCreatedEvent event = AccountCreatedEvent.builder()
+        try {
+            AccountCreatedEvent event = AccountCreatedEvent.builder()
             .accountId(acc.getId())
             .userName(acc.getUsername())
             .email(acc.getEmail())
@@ -63,9 +68,12 @@ public class AuthService {
             .phone(r.getPhone())
             .build();
 
-        rabbitTemplate.convertAndSend("account.created.queue", event);
+            rabbitTemplate.convertAndSend("account.created.queue", event);
+        } catch (Exception e) {
+           log.error("Failed to send message to RabbitMQ: {}", e.getMessage());
+        }
 
-        return loginAfterRegister(acc);
+        return loginAfterRegister(acc, r.getFullName());
 
     }
 
@@ -90,7 +98,7 @@ public class AuthService {
         return res;
     }
 
-  private AuthResponse loginAfterRegister(Account acc) {
+  private AuthResponse loginAfterRegister(Account acc, String fullname) {
         String token = jwt.generateToken(acc);
         AuthResponse res = new AuthResponse();
         res.setToken(token);
@@ -98,6 +106,7 @@ public class AuthService {
         res.setUsername(acc.getUsername());
         res.setRole(acc.getRole().name());
         res.setEmail(acc.getEmail());
+        res.setFullName(fullname);
         return res;
     }
 

@@ -1,6 +1,7 @@
 package com.oms.profile.listener;
 
-import com.oms.identityservice.dto.AccountCreatedEvent; 
+
+import com.oms.profile.dto.AccountCreatedEvent;
 import com.oms.profile.entity.Customer;
 import com.oms.profile.entity.Staff;
 import com.oms.profile.repository.CustomerRepository;
@@ -42,7 +43,7 @@ public class AccountEventListener {
             staff.setPhone(event.getPhone());
             staff.setEmployeeCode("NV-" + System.currentTimeMillis()); 
             staff.setActive(true);
-            
+        
             staffRepository.save(staff);
             log.info("Đã tạo xong hồ sơ Nhân viên cho: {}", event.getUserName());
         }

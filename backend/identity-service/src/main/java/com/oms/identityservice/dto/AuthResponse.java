@@ -1,6 +1,5 @@
 package com.oms.identityservice.dto;
 
-import com.oms.identityservice.entity.Enum.Role;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,6 +13,10 @@ public class AuthResponse {
 
     public String username;
 
-    public Role role;
+    public String role;
+
+    private String accountId;
+    private String fullName;
+    private String email;
 
 }

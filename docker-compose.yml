@@ -16,7 +16,8 @@ services:
     networks:
       - oms-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      test:
+        ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -82,10 +83,36 @@ services:
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=user
+      - SPRING_RABBITMQ_PASSWORD=password
     depends_on:
       mariadb:
         condition: service_healthy
       discovery-server:
+        condition: service_started
+    networks:
+      - oms-network
+
+  profile-service:
+    build: ./backend/profile-service
+    container_name: oms-profile
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/db_profile
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=user
+      - SPRING_RABBITMQ_PASSWORD=password
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+      rabbitmq:
         condition: service_started
     networks:
       - oms-network

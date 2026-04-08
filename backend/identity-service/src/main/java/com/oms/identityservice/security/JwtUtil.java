@@ -18,14 +18,13 @@ public class JwtUtil {
 
     @Value("${jwt.expiration}")
     private long expiration;
-
-
+    
     public String generateToken(Account acc){
 
         return Jwts.builder()
                 .setSubject(acc.getUsername())
                 .claim("role", acc.getRole().name())
-                .claim("userId", acc.getUser().getId())
+                .claim("accountId", acc.getId())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(Keys.hmacShaKeyFor(secret.getBytes()))

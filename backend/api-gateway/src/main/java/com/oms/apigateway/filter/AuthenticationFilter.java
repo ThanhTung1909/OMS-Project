@@ -52,16 +52,22 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
                 Claims claims = jwtUtil.getAllClaimsFromToken(token);
                 String role = String.valueOf(claims.get("role"));
+                Object accountIdObj = claims.get("accountId");
+                if (accountIdObj == null) {
+                    return this.onError(exchange, "Unauthorized: Token missing account info", HttpStatus.UNAUTHORIZED);
+                }
+                String accountId = String.valueOf(accountIdObj); 
 
                 if(!isAuthorized(path, method, role)){
                     return this.onError(exchange, "Forbidden: Bạn không có quyền thực hiện hành động này", HttpStatus.FORBIDDEN);
                 }
 
-                exchange.getRequest().mutate()
-                        .header("X-User-Id", String.valueOf(claims.get("userId")))
-                        .header("X-User-Role", String.valueOf(claims.get("role")))
-                        .header("X-User-Name", claims.getSubject())
-                        .build();
+                ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
+                    .header("X-Account-Id", accountId) 
+                    .header("X-User-Role", role)
+                    .header("X-User-Name", claims.getSubject())
+                    .build();
+            return chain.filter(exchange.mutate().request(modifiedRequest).build());
 
             }catch (Exception e){
                 return this.onError(exchange, "Unauthorized: Invalid token", HttpStatus.UNAUTHORIZED);

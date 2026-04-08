@@ -3,11 +3,19 @@ server:
 spring:
     application:
         name: identity-service 
+
+    rabbitmq:
+        host: ${SPRING_RABBITMQ_HOST:localhost}
+        port: ${SPRING_RABBITMQ_PORT:5672}
+        username: ${SPRING_RABBITMQ_USERNAME:user}
+        password: ${SPRING_RABBITMQ_PASSWORD:password}
+
     datasource:
         url: jdbc:mariadb://localhost:3306/db_identity
         username: root
         password: root
         driver-class-name: org.mariadb.jdbc.Driver
+        
     jpa:
         hibernate:
             ddl-auto: update

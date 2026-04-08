@@ -4,8 +4,10 @@ import com.oms.identityservice.dto.AuthResponse;
 import com.oms.identityservice.dto.LoginRequest;
 import com.oms.identityservice.dto.RegisterRequest;
 import com.oms.identityservice.service.AuthService;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,25 +19,22 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthController {
 
-    @Autowired
-    AuthService authService;
+    
+    private final AuthService authService;
 
     @PostMapping("/register")
-    public String register(
-            @RequestBody RegisterRequest r){
+    public ResponseEntity<AuthResponse> register( @Valid @RequestBody RegisterRequest r){
 
-        authService.register(r);
-
-        return "SUCCESS";
+        return ResponseEntity.ok(authService.register(r));
 
     }
 
     @PostMapping("/login")
 
-    public AuthResponse login(
+    public ResponseEntity<AuthResponse> login(
             @RequestBody LoginRequest r){
 
-        return authService.login(r);
+        return ResponseEntity.ok(authService.login(r));
 
     }
 

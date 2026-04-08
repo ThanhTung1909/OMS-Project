@@ -22,6 +22,9 @@ public class Order {
     private String userId;
     private OrderStatus status;
     private BigDecimal totalAmount;
+    private String paymentId;
+    private String deliveryId;
+    private String errorMessage;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

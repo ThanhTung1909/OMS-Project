@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(name = "inventory-service", url = "http://localhost:8083")
 public interface InventoryClient {
-    @PostMapping("/api/v1/inventory/update")
+    @PostMapping("/api/v1/inventory/reserve")
     InventoryUpdateResponse updateInventory(@RequestBody InventoryUpdateRequest inventoryUpdateRequest);
 
 }

@@ -3,7 +3,6 @@ package com.oms.productservice.controller;
 import com.oms.productservice.dto.productDTO.ProductRequest;
 import com.oms.productservice.dto.productDTO.ProductResponse;
 import com.oms.productservice.service.ProductService;
-import jakarta.ws.rs.Path;
 import lombok.RequiredArgsConstructor;
 import org.apache.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

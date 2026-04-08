@@ -34,8 +34,9 @@ public class Product {
     @ElementCollection
     @CollectionTable(
             name = "hinh_anh",
-            joinColumns = @JoinColumn(name = "id")
+            joinColumns = @JoinColumn(name = "product_id")
     )
+    @Column(name = "image_url")
     private List<String> imageUrl;
 
     @CreationTimestamp
@@ -45,7 +46,7 @@ public class Product {
     private LocalDateTime updatedAt;
 
     @ManyToOne
-    @JoinColumn(name = "categoryId", unique = true)
+    @JoinColumn(name = "category_id")
     private Category category;
 
 

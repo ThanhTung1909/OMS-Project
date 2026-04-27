@@ -6,10 +6,10 @@ import com.oms.identityservice.dto.AuthResponse;
 import com.oms.identityservice.dto.LoginRequest;
 import com.oms.identityservice.dto.RegisterRequest;
 import com.oms.identityservice.entity.Account;
+import com.oms.common.AppException;
+import com.oms.identityservice.exception.IdentityErrorCode;
 import com.oms.identityservice.entity.Enum.AccountStatus;
-import com.oms.identityservice.entity.Enum.ErrorCode;
 import com.oms.identityservice.entity.Enum.Role;
-import com.oms.identityservice.exception.AppException;
 import com.oms.identityservice.repository.AccountRepository;
 import com.oms.identityservice.security.JwtUtil;
 import jakarta.transaction.Transactional;
@@ -34,15 +34,15 @@ public class AuthService {
     public AuthResponse register(RegisterRequest r){
 
         if(!r.getPassword().equals(r.getConfirmPassword())){
-            throw new AppException(ErrorCode.INVALID_PASSWORD);
+            throw new AppException(IdentityErrorCode.INVALID_PASSWORD);
         }
 
         if(accountRepository.findByUsername(r.getUsername()).isPresent()){
-            throw new AppException(ErrorCode.USER_EXISTED); 
+            throw new AppException(IdentityErrorCode.USER_EXISTED); 
         }
 
         if(accountRepository.findByEmail(r.getEmail()).isPresent()){
-            throw new AppException(ErrorCode.EMAIL_EXISTED); 
+            throw new AppException(IdentityErrorCode.EMAIL_EXISTED); 
         }
 
 
@@ -79,10 +79,10 @@ public class AuthService {
 
         Account acc= accountRepository
                         .findByUsername(r.getUsername())
-                        .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại"));
+                        .orElseThrow(() -> new AppException(IdentityErrorCode.USER_NOT_FOUND));
 
         if(!encoder.matches(r.getPassword(), acc.getPasswordHash()))
-            throw new RuntimeException("Sai mật khẩu");
+            throw new AppException(IdentityErrorCode.INVALID_CREDENTIALS);
 
         String token= jwt.generateToken(acc);
 

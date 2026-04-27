@@ -1,10 +1,10 @@
-package com.oms.identityservice.exception;
-
-import com.oms.identityservice.entity.Enum.ErrorCode;
+package com.oms.common;
 
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 public class AppException extends RuntimeException {
     private final ErrorCode errorCode;
 

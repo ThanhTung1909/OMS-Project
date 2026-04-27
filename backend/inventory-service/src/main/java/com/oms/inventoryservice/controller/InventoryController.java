@@ -1,5 +1,6 @@
 package com.oms.inventoryservice.controller;
 
+import com.oms.common.ApiResponse;
 import com.oms.inventoryservice.dto.UpdateInventoryRequest;
 import com.oms.inventoryservice.dto.UpdateInventoryResponse;
 import com.oms.inventoryservice.service.InventoryService;
@@ -21,36 +22,34 @@ public class InventoryController {
      * Cập nhật số lượng tồn kho
      */
     @PostMapping("/update")
-    public ResponseEntity<UpdateInventoryResponse> updateInventory(@RequestBody UpdateInventoryRequest request) {
-        try {
-            log.info("Received update inventory request: {}", request);
-            UpdateInventoryResponse response = inventoryService.updateInventory(request);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Error updating inventory: {}", e.getMessage());
-            UpdateInventoryResponse errorResponse = UpdateInventoryResponse.builder()
-                    .message("Error: " + e.getMessage())
-                    .build();
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        }
+    public ResponseEntity<ApiResponse<UpdateInventoryResponse>> updateInventory(@RequestBody UpdateInventoryRequest request) {
+        log.info("Received update inventory request: {}", request);
+        UpdateInventoryResponse response = inventoryService.updateInventory(request);
+        return ResponseEntity.ok(
+            ApiResponse.<UpdateInventoryResponse>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Thành công")
+                .result(response)
+                .build()
+        );
     }
 
     /**
      * Lấy thông tin tồn kho theo productId
      */
     @GetMapping("/product/{productId}")
-    public ResponseEntity<UpdateInventoryResponse> getInventory(@PathVariable String productId) {
-        try {
-            log.info("Retrieving inventory for product: {}", productId);
-            UpdateInventoryResponse response = inventoryService.getInventoryByProductId(productId);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Error retrieving inventory: {}", e.getMessage());
-            UpdateInventoryResponse errorResponse = UpdateInventoryResponse.builder()
-                    .message("Error: " + e.getMessage())
-                    .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
+    public ResponseEntity<ApiResponse<UpdateInventoryResponse>> getInventory(@PathVariable String productId) {
+        log.info("Retrieving inventory for product: {}", productId);
+        UpdateInventoryResponse response = inventoryService.getInventoryByProductId(productId);
+        return ResponseEntity.ok(
+            ApiResponse.<UpdateInventoryResponse>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Thành công")
+                .result(response)
+                .build()
+        );
     }
 
     /**

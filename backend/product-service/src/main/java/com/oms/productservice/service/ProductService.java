@@ -6,6 +6,8 @@ import com.oms.productservice.entity.Category;
 import com.oms.productservice.entity.Product;
 import com.oms.productservice.repository.CategoryRepository;
 import com.oms.productservice.repository.ProductRepository;
+import com.oms.common.AppException;
+import com.oms.productservice.exception.ProductErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +23,7 @@ public class ProductService {
     // Create product
     public ProductResponse createProduct(ProductRequest request){
         Category category = categoryRepo.findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new AppException(ProductErrorCode.CATEGORY_NOT_FOUND));
 
         Product product = Product.builder()
                 .name(request.getName())
@@ -43,7 +45,7 @@ public class ProductService {
     }
 
     public  ProductResponse getProductById(String id){
-        Product product = productrepo.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        Product product = productrepo.findById(id).orElseThrow(() -> new AppException(ProductErrorCode.PRODUCT_NOT_FOUND));
 
         return mapToProductResponse(product);
     }
@@ -63,9 +65,9 @@ public class ProductService {
     }
 
     public ProductResponse updateProduct(String id, ProductRequest request){
-        Product product = productrepo.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        Product product = productrepo.findById(id).orElseThrow(() -> new AppException(ProductErrorCode.PRODUCT_NOT_FOUND));
 
-        Category category = categoryRepo.findById(request.getCategoryId()).orElseThrow(() -> new RuntimeException("Category not found"));
+        Category category = categoryRepo.findById(request.getCategoryId()).orElseThrow(() -> new AppException(ProductErrorCode.CATEGORY_NOT_FOUND));
 
         product.setName(request.getName());
         product.setDescription(request.getDescription());
@@ -80,7 +82,7 @@ public class ProductService {
 
     public void deleteProduct(String id){
         if(!productrepo.existsById(id)){
-            throw new RuntimeException("Product not found");
+            throw new AppException(ProductErrorCode.PRODUCT_NOT_FOUND);
         }
 
         productrepo.deleteById(id);

@@ -79,7 +79,17 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     private Mono<Void> onError(ServerWebExchange exchange, String err, HttpStatus httpStatus) {
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(httpStatus);
-        return  response.setComplete();
+        response.getHeaders().add("Content-Type", "application/json");
+
+        String jsonResponse = String.format(
+            "{\"success\": false, \"status\": %d, \"message\": \"%s\"}",
+            httpStatus.value(), err
+        );
+
+        byte[] bytes = jsonResponse.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        org.springframework.core.io.buffer.DataBuffer buffer = response.bufferFactory().wrap(bytes);
+
+        return response.writeWith(Mono.just(buffer));
     }
 
     private boolean isAuthorized(String path, HttpMethod method, String role){

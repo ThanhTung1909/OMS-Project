@@ -1,33 +1,32 @@
 # --- Stage 1: Build ---
-# Dùng image Maven để build ra file .jar
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 
-# Copy file cấu hình dependency trước để tận dụng cache của Docker
+# 1. Copy file POM tổng và module common-library TRƯỚC
+# Lưu ý: Lệnh này yêu cầu Build Context phải đứng ở thư mục "backend"
 COPY pom.xml .
-# (Tùy chọn) Nếu project cha nằm ngoài, bạn cần copy cả pom cha.
-# Nhưng với cấu trúc microservice độc lập thường thấy thì chỉ cần pom hiện tại.
 
-# Tải dependencies (để cache layer này, lần sau build sẽ nhanh hơn)
-RUN mvn dependency:go-offline
+RUN mvn install -N -DskipTests
 
-# Copy toàn bộ source code vào
-COPY src ./src
+COPY common-library ./common-library
 
-# Build ứng dụng (Bỏ qua test để build nhanh như đã bàn trước đó)
-RUN mvn clean package -DskipTests
+# 2. Cài đặt common-library vào kho chứa cục bộ của Docker
+# Bước này cực kỳ quan trọng để giải quyết lỗi "Missing artifact"
+RUN mvn -f common-library/pom.xml clean install -DskipTests
+
+# 3. Copy mã nguồn của Service cụ thể (Ví dụ này là identity-service)
+# Hãy thay "identity-service" bằng tên thư mục service tương ứng
+COPY identity-service ./identity-service
+
+# 4. Build Service chính
+RUN mvn -f identity-service/pom.xml clean package -DskipTests
 
 # --- Stage 2: Run ---
-# Dùng image JRE siêu nhẹ chỉ để chạy ứng dụng
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # Copy file .jar từ Stage 1 sang Stage 2
-# Lưu ý: *.jar sẽ lấy file jar được build ra, đổi tên thành app.jar cho ngắn gọn
-COPY --from=build /app/target/*.jar app.jar
+# Lưu ý sửa đường dẫn copy đúng theo tên service
+COPY --from=build /app/identity-service/target/*.jar app.jar
 
-# Expose port (Identity service thường chạy port 8081 hoặc do bạn cấu hình)
-EXPOSE 8081
-
-# Lệnh chạy ứng dụng
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Dloader.path=/app/target/classes,/common-library/target/classes", "-jar", "app.jar"]

@@ -18,7 +18,11 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+
+import com.oms.common.AppException;
+import com.oms.orderservice.exception.OrderErrorCode;
+import com.oms.common.CommonErrorCode;
+import com.oms.orderservice.dto.OrderResponse;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -77,7 +81,7 @@ public class OrderService {
             }
         } catch (Exception ex) {
             log.error("Lỗi giữ kho: {}", ex.getMessage());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm trong kho không đủ hoặc có lỗi hệ thống kho.");
+            throw new AppException(CommonErrorCode.INTERNAL_SERVER_ERROR);
         }
 
         // 4. Lưu DB thành công trả về ID cho FE
@@ -96,5 +100,16 @@ public class OrderService {
 
         return savedOrder.getId();
 
+    }
+
+    public OrderResponse getOrder(String orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException(OrderErrorCode.ORDER_NOT_FOUND));
+
+        return OrderResponse.builder()
+                .orderId(order.getId())
+                .status(order.getStatus().name())
+                .message("Thông tin đơn hàng")
+                .build();
     }
 }

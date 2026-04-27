@@ -18,6 +18,7 @@
     <packaging>pom</packaging> <!-- QUAN TRỌNG -->
 
     <modules>
+        <module>common-library</module>
         <module>discovery-server</module>
         <module>api-gateway</module>
         <module>identity-service</module>
@@ -43,6 +44,11 @@
                 <version>${spring-cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.oms</groupId>
+                <artifactId>common-library</artifactId>
+                <version>1.0.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

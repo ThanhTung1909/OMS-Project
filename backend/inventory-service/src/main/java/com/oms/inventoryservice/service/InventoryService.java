@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.oms.common.AppException;
+import com.oms.inventoryservice.exception.InventoryErrorCode;
+import com.oms.common.CommonErrorCode;
 import java.util.Optional;
 
 @Slf4j
@@ -52,7 +55,7 @@ public class InventoryService {
                     inventory.setAvailableQuantity(inventory.getAvailableQuantity() + request.getQuantity());
                     message = "Added " + request.getQuantity() + " units to available quantity";
                 } else {
-                    throw new IllegalArgumentException("Add quantity must be positive");
+                    throw new AppException(CommonErrorCode.INVALID_INPUT);
                 }
                 break;
 
@@ -62,7 +65,7 @@ public class InventoryService {
                     inventory.setAvailableQuantity(inventory.getAvailableQuantity() - request.getQuantity());
                     message = "Reduced " + request.getQuantity() + " units from available quantity";
                 } else {
-                    throw new IllegalArgumentException("Invalid reduce quantity or insufficient stock");
+                    throw new AppException(InventoryErrorCode.INSUFFICIENT_STOCK);
                 }
                 break;
 
@@ -73,7 +76,7 @@ public class InventoryService {
                     inventory.setReservedQuantity(inventory.getReservedQuantity() + request.getQuantity());
                     message = "Reserved " + request.getQuantity() + " units";
                 } else {
-                    throw new IllegalArgumentException("Insufficient available quantity to reserve");
+                    throw new AppException(InventoryErrorCode.INSUFFICIENT_STOCK);
                 }
                 break;
 
@@ -84,12 +87,12 @@ public class InventoryService {
                     inventory.setAvailableQuantity(inventory.getAvailableQuantity() + request.getQuantity());
                     message = "Released " + request.getQuantity() + " reserved units";
                 } else {
-                    throw new IllegalArgumentException("Insufficient reserved quantity to release");
+                    throw new AppException(InventoryErrorCode.INSUFFICIENT_STOCK);
                 }
                 break;
 
             default:
-                throw new IllegalArgumentException("Invalid update type: " + request.getType());
+                throw new AppException(CommonErrorCode.INVALID_INPUT);
         }
 
         // Lưu vào database

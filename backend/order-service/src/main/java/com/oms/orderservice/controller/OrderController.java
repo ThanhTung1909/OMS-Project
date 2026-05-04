@@ -9,14 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -71,5 +66,35 @@ public class OrderController {
                 .result(result)
                 .build()
         );
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> getMyOrders(@RequestHeader("X-Account-Id") String userId) {
+        return ResponseEntity.ok(ApiResponse.<List<OrderResponse>>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Thành công")
+                .result(orderService.getMyOrders(userId))
+                .build());
+    }
+
+    @PutMapping("/{id}/prepare")
+    public ResponseEntity<ApiResponse<Void>> prepareOrder(@PathVariable String id) {
+        orderService.prepareOrder(id);
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Đã duyệt đơn")
+                .build());
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<Void>> cancelOrder(@PathVariable String id, @RequestHeader("X-Account-Id") String userId) {
+        orderService.cancelOrder(id, userId);
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Đã hủy đơn")
+                .build());
     }
 }

@@ -1,8 +1,8 @@
-package com.example.deliveryservice.service;
+package com.oms.deliveryservice.service;
 
-import com.example.deliveryservice.entity.Delivery;
-import com.example.deliveryservice.entity.DeliveryStatus;
-import com.example.deliveryservice.repository.DeliveryRepository;
+import com.oms.deliveryservice.entity.Delivery;
+import com.oms.deliveryservice.entity.DeliveryStatus;
+import com.oms.deliveryservice.repository.DeliveryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +27,7 @@ public class DeliveryService {
         if (optionalDelivery.isPresent()) {
             Delivery delivery = optionalDelivery.get();
             delivery.setStatus(status);
+            delivery.setUpdatedAt(java.time.LocalDateTime.now());
             return Optional.of(deliveryRepository.save(delivery));
         }
         return Optional.empty();

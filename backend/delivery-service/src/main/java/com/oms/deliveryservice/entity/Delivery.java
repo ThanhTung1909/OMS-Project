@@ -1,4 +1,4 @@
-package com.example.deliveryservice.entity;
+package com.oms.deliveryservice.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -43,7 +43,6 @@ public class Delivery {
     }
 
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
     public Long getOrderId() { return orderId; }
     public void setOrderId(Long orderId) { this.orderId = orderId; }
     public DeliveryStatus getStatus() { return status; }

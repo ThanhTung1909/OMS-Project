@@ -1,8 +1,8 @@
-package com.example.deliveryservice.controller;
+package com.oms.deliveryservice.controller;
 
-import com.example.deliveryservice.entity.Delivery;
-import com.example.deliveryservice.entity.DeliveryStatus;
-import com.example.deliveryservice.service.DeliveryService;
+import com.oms.deliveryservice.entity.Delivery;
+import com.oms.deliveryservice.entity.DeliveryStatus;
+import com.oms.deliveryservice.service.DeliveryService;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;

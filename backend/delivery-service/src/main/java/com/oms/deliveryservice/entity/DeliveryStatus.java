@@ -1,4 +1,4 @@
-package com.example.deliveryservice.entity;
+package com.oms.deliveryservice.entity;
 
 public enum DeliveryStatus {
     READY_TO_UP,

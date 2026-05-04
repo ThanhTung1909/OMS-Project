@@ -1,6 +1,6 @@
-package com.example.deliveryservice.repository;
+package com.oms.deliveryservice.repository;
 
-import com.example.deliveryservice.entity.Delivery;
+import com.oms.deliveryservice.entity.Delivery;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

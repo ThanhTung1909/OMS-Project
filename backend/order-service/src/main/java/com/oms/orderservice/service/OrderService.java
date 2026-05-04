@@ -4,6 +4,7 @@ import com.oms.common.AppException;
 import com.oms.common.CommonErrorCode;
 import com.oms.orderservice.client.InventoryClient;
 import com.oms.orderservice.config.RabbitMQConfig;
+import com.oms.orderservice.dto.InventoryCommand;
 import com.oms.orderservice.dto.InventoryUpdateRequest;
 import com.oms.orderservice.dto.OrderItemRequest;
 import com.oms.orderservice.dto.OrderRequest;
@@ -80,18 +81,25 @@ public class OrderService {
                 .collect(Collectors.toList());
         order.setOrderItems(orderItems);
 
+        // 1. Chuyển sang Bulk Request
+        List<InventoryUpdateRequest> bulkRequests = request.getOrderItems().stream()
+                .map(item -> InventoryUpdateRequest.builder()
+                        .productId(item.getProductId())
+                        .quantity(item.getQuantity())
+                        .type("RESERVE")
+                        .build())
+                .collect(Collectors.toList());
+
         boolean inventoryReserved = false;
         try {
-            // Bước A: Giữ kho
-            for (OrderItemRequest item : request.getOrderItems()) {
-                inventoryClient.updateInventory(new InventoryUpdateRequest(item.getProductId(), item.getQuantity(), "RESERVE"));
-            }
+            // 2. Gọi Bulk API duy nhất một lần
+            inventoryClient.updateInventory(bulkRequests);
             inventoryReserved = true;
 
             // Bước B: Lưu DB
             orderRepository.save(order);
 
-            // Bước C: Bắn lệnh thanh toán
+            // 3. Gửi lệnh thanh toán
             PaymentCommand command = PaymentCommand.builder()
                     .orderId(orderId)
                     .userId(request.getUserId())
@@ -107,9 +115,10 @@ public class OrderService {
         } catch (Exception ex) {
             log.error("Lỗi tạo đơn hàng {}: {}", orderId, ex.getMessage());
 
-            // Compensation: Trả kho nếu đã giữ thành công
             if (inventoryReserved) {
-                rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "inventory.command.rollback", orderId);
+                // Sử dụng Command Object thay vì String
+                InventoryCommand rollbackCmd = new InventoryCommand(orderId, "ROLLBACK");
+                rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "inventory.command.rollback", rollbackCmd);
             }
 
             // Throw exception để rollback DB Transaction (Order sẽ không bị lưu record lỗi)
@@ -152,7 +161,8 @@ public class OrderService {
         orderRepository.save(order);
 
         // Bắn event trả hàng về kho
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "inventory.command.rollback", orderId);
+        InventoryCommand rollbackCmd = new InventoryCommand(orderId, "ROLLBACK");
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "inventory.command.rollback", rollbackCmd);
     }
 
     public OrderResponse getOrder(String orderId) {

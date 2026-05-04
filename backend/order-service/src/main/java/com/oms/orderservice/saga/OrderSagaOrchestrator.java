@@ -6,10 +6,12 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
+import com.oms.orderservice.dto.InventoryCommand;
 import com.oms.orderservice.dto.PaymentResultPayload;
 import com.oms.orderservice.entity.Order;
 import com.oms.orderservice.entity.OrderStatus;
 import com.oms.orderservice.repository.OrderRepository;
+import com.oms.orderservice.config.RabbitMQConfig;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -22,43 +24,37 @@ public class OrderSagaOrchestrator {
     private final OrderRepository orderRepository;
     private final RabbitTemplate rabbitTemplate;
 
-    @RabbitListener(queues = "payment.reply.result.queue")
+    @RabbitListener(queues = RabbitMQConfig.PAYMENT_REPLY_QUEUE)
     @Transactional
-    public void handlePaymentResult(PaymentResultPayload payload){
-        if (payload == null || payload.getOrderId() == null) {
-            log.error("Nhận được payload thanh toán trống hoặc thiếu OrderId!");
+    public void handlePaymentResult(PaymentResultPayload payload) {
+        if (payload == null || payload.getOrderId() == null) return;
+
+        Order order = orderRepository.findById(payload.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Order not found: " + payload.getOrderId()));
+
+        // Idempotency check: Chỉ xử lý nếu đơn hàng đang chờ thanh toán
+        if (order.getStatus() != OrderStatus.PAYMENT_PENDING) {
+            log.info("Saga: Đơn hàng {} đã được xử lý trước đó (Status: {}). Bỏ qua.", 
+                     order.getId(), order.getStatus());
             return;
         }
 
-        log.info("Saga Nhạc trưởng nhận kết quả thanh toán cho đơn {}: {}", payload.getOrderId(), payload.getStatus());
-
-        Order order = orderRepository.findById(payload.getOrderId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
-
-        String exchangeName = "order.exchange"; 
-
         if ("COMPLETED".equalsIgnoreCase(payload.getStatus())) {
-            // TH1: Thành công (CONFIRMED)
+            log.info("Saga: Thanh toán thành công cho đơn {}. Bắt đầu CONFIRM kho.", order.getId());
             order.setStatus(OrderStatus.CONFIRMED);
-            order.setUpdatedAt(LocalDateTime.now());
             order.setPaymentId(payload.getTransactionId());
-            orderRepository.save(order);
-
-            // Bắn lệnh sang Inventory chốt trừ kho vĩnh viễn
-            rabbitTemplate.convertAndSend(exchangeName, "inventory.command.confirm", payload.getOrderId());
-            log.info("Thanh toán thành công -> Đã gửi lệnh CHỐT KHO cho đơn {}", order.getId());
-
-        } else if ("FAILED".equalsIgnoreCase(payload.getStatus())) {
-            // TH2: Thất bại (CANCELLED)
+            
+            InventoryCommand confirmCmd = new InventoryCommand(order.getId(), "CONFIRM");
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "inventory.command.confirm", confirmCmd);
+        } else {
+            log.info("Saga: Thanh toán thất bại cho đơn {}. Bắt đầu ROLLBACK kho.", order.getId());
             order.setStatus(OrderStatus.CANCELLED);
-            order.setUpdatedAt(LocalDateTime.now());
-            orderRepository.save(order);
-
-            // Bắn lệnh sang Inventory nhả kho (Rollback) cho người khác mua
-            rabbitTemplate.convertAndSend(exchangeName, "inventory.command.rollback", payload.getOrderId());
-            log.info("Thanh toán thất bại -> Đã gửi lệnh NHẢ KHO cho đơn {}", order.getId());
+            
+            InventoryCommand rollbackCmd = new InventoryCommand(order.getId(), "ROLLBACK");
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "inventory.command.rollback", rollbackCmd);
         }
+        
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
     }
-
-
 }

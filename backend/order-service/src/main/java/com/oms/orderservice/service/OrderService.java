@@ -151,12 +151,41 @@ public class OrderService {
                 .orElseThrow(() -> new AppException(OrderErrorCode.ORDER_NOT_FOUND));
 
         if (order.getStatus() != OrderStatus.CONFIRMED) {
+            log.error("Không thể duyệt đơn hàng {}. Trạng thái hiện tại: {}", orderId, order.getStatus());
             throw new AppException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
 
+        // 1. Cập nhật trạng thái DB
         order.setStatus(OrderStatus.SHIPPING);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
+        log.info("Đã cập nhật đơn hàng {} sang trạng thái SHIPPING", orderId);
+
+        // 2. Gửi lệnh tạo vận đơn sang Delivery Service
+        try {
+            OrderAddress addr = order.getShippingAddress();
+            
+            // Xử lý ghép địa chỉ an toàn (bỏ qua null/empty)
+            String fullAddress = java.util.stream.Stream.of(
+                    addr.getStreet(), addr.getWard(), addr.getDistrict(), addr.getCity())
+                    .filter(s -> s != null && !s.isEmpty())
+                    .collect(java.util.stream.Collectors.joining(", "));
+
+            com.oms.orderservice.dto.DeliveryRequest deliveryRequest = com.oms.orderservice.dto.DeliveryRequest.builder()
+                    .orderId(orderId)
+                    .receiverName(addr.getReceiverName())
+                    .receiverPhone(addr.getReceiverPhone())
+                    .address(fullAddress)
+                    .build();
+
+            log.info("[SAGA] Đang gửi lệnh tạo vận đơn cho Order: {}", orderId);
+            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_COMMAND_CREATE, deliveryRequest);
+            log.info("[SAGA] Đã gửi tin nhắn thành công cho Order: {}", orderId);
+
+        } catch (Exception e) {
+            log.error("[SAGA] Lỗi khi gửi lệnh tạo vận đơn cho Order {}: {}", orderId, e.getMessage(), e);
+            // Có thể cân nhắc bắn bù hoặc xử lý retry ở đây nếu cần
+        }
     }
 
     @Transactional

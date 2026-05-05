@@ -3,6 +3,10 @@ server:
 spring:
   application:
     name: api-gateway
+  data:
+    redis:
+      host: localhost
+      port: 6379
   cloud:
     gateway:
       discovery:
@@ -23,6 +27,12 @@ spring:
               - OPTIONS
             allowedHeaders: "*"
             allowCredentials: true
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 10
+            redis-rate-limiter.burstCapacity: 20
+            key-resolver: "#{@userKeyResolver}"
       routes:
         - id: identity-service
           uri: lb://identity-service
@@ -36,6 +46,11 @@ spring:
           uri: lb://order-service
           predicates:
             - Path=/api/v1/orders/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: orderCircuitBreaker
+                fallbackUri: forward:/fallback
         - id: product-service
           uri: lb://product-service
           predicates:
@@ -45,6 +60,12 @@ spring:
           uri: lb://inventory-service
           predicates:
             - Path=/api/v1/inventory/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: inventoryCircuitBreaker
+                fallbackUri: forward:/fallback
+
 
         - id: payment-service
           uri: lb://payment-service

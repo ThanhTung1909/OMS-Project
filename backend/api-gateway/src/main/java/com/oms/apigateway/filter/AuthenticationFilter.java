@@ -3,6 +3,7 @@ package com.oms.apigateway.filter;
 import com.oms.apigateway.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -14,13 +15,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.util.UUID;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AuthenticationFilter implements GlobalFilter, Ordered {
 
     private final RouterValidator validator;
-
     private final JwtUtil jwtUtil;
 
     @Override
@@ -30,9 +32,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         HttpMethod method = request.getMethod();
         boolean isSecured = validator.isSecured.test(request);
 
-        System.out.println("DEBUG: Path: " + path + " | isSecured: " + isSecured);
+        String correlationId = UUID.randomUUID().toString();
 
-        if(validator.isSecured.test(request)){
+        if(isSecured){
             if(!request.getHeaders().containsKey("Authorization")){
                 return this.onError(exchange, "Missing Authorization header", HttpStatus.UNAUTHORIZED);
             }
@@ -58,22 +60,29 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 }
                 String accountId = String.valueOf(accountIdObj); 
 
-                if(!isAuthorized(path, method, role)){
-                    return this.onError(exchange, "Forbidden: Bạn không có quyền thực hiện hành động này", HttpStatus.FORBIDDEN);
-                }
+                log.info("[GATEWAY] {} {} | CorrelationId: {} | Account: {} | Role: {}", method, path, correlationId, accountId, role);
 
                 ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
                     .header("X-Account-Id", accountId) 
                     .header("X-User-Role", role)
-                    .header("X-User-Name", claims.getSubject())
+                    .header("X-Correlation-Id", correlationId)
                     .build();
-            return chain.filter(exchange.mutate().request(modifiedRequest).build());
+                
+                return chain.filter(exchange.mutate().request(modifiedRequest).build());
 
             }catch (Exception e){
+                log.error("[GATEWAY] Invalid token for request {} {}", method, path, e);
                 return this.onError(exchange, "Unauthorized: Invalid token", HttpStatus.UNAUTHORIZED);
             }
         }
-        return chain.filter(exchange);
+        
+        log.info("[GATEWAY] {} {} | CorrelationId: {} | Account: anonymous | Role: NONE", method, path, correlationId);
+        
+        ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
+                .header("X-Correlation-Id", correlationId)
+                .build();
+                
+        return chain.filter(exchange.mutate().request(modifiedRequest).build());
     }
 
     private Mono<Void> onError(ServerWebExchange exchange, String err, HttpStatus httpStatus) {
@@ -90,15 +99,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         org.springframework.core.io.buffer.DataBuffer buffer = response.bufferFactory().wrap(bytes);
 
         return response.writeWith(Mono.just(buffer));
-    }
-
-    private boolean isAuthorized(String path, HttpMethod method, String role){
-        if(path.startsWith("/api/v1/products")){
-            if(method == HttpMethod.POST || method == HttpMethod.PUT || method == HttpMethod.DELETE){
-                return "ADMIN".equalsIgnoreCase(role);
-            }
-        }
-        return true;
     }
 
     @Override

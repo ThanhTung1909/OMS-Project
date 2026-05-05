@@ -11,12 +11,16 @@ import com.oms.identityservice.exception.IdentityErrorCode;
 import com.oms.identityservice.entity.Enum.AccountStatus;
 import com.oms.identityservice.entity.Enum.Role;
 import com.oms.identityservice.repository.AccountRepository;
+import com.oms.identityservice.repository.OutboxEventRepository;
 import com.oms.identityservice.security.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.oms.identityservice.entity.OutboxEvent;
+import com.oms.identityservice.entity.Enum.OutboxStatus;
+import com.oms.common.constant.RabbitMQConstants;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +32,8 @@ public class AuthService {
     private final AccountRepository accountRepository;
     private final PasswordEncoder encoder;
     private final JwtUtil jwt;
-    private final RabbitTemplate rabbitTemplate;
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public AuthResponse register(RegisterRequest r){
@@ -45,7 +50,6 @@ public class AuthService {
             throw new AppException(IdentityErrorCode.EMAIL_EXISTED); 
         }
 
-
         Account acc=new Account();
         acc.setUsername(r.getUsername());
         acc.setPasswordHash(encoder.encode(r.getPassword()));
@@ -55,7 +59,7 @@ public class AuthService {
         
         acc = accountRepository.save(acc);
 
-        // Bắn tin nhắn sang profile service
+        // Transactional Outbox: Lưu event vào DB thay vì gửi trực tiếp tới RabbitMQ
         try {
             AccountCreatedEvent event = AccountCreatedEvent.builder()
             .accountId(acc.getId())
@@ -66,9 +70,20 @@ public class AuthService {
             .phone(r.getPhone())
             .build();
 
-            rabbitTemplate.convertAndSend("account.created.queue", event);
+            String payload = objectMapper.writeValueAsString(event);
+            
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .aggregateId(acc.getId())
+                    .type(RabbitMQConstants.IDENTITY_ACCOUNT_CREATED)
+                    .payload(payload)
+                    .status(OutboxStatus.PENDING)
+                    .build();
+                    
+            outboxEventRepository.save(outboxEvent);
+            log.info("Saved AccountCreatedEvent to Outbox for accountId: {}", acc.getId());
         } catch (Exception e) {
-           log.error("Failed to send message to RabbitMQ: {}", e.getMessage());
+           log.error("Failed to serialize and save outbox event: {}", e.getMessage());
+           throw new AppException(IdentityErrorCode.UNCATEGORIZED_EXCEPTION);
         }
 
         return loginAfterRegister(acc, r.getFullName());

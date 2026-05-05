@@ -27,7 +27,7 @@ public class ProductService {
     @Transactional
     public ProductResponse createProduct(ProductRequest request){
         if(productrepo.existsBySku(request.getSku())) {
-            throw new AppException(ProductErrorCode.SKU_ALREADY_EXISTS);
+            throw new AppException(ProductErrorCode.PRODUCT_SKU_ALREADY_EXISTS);
         }
 
         Category category = categoryRepo.findById(request.getCategoryId())
@@ -42,7 +42,11 @@ public class ProductService {
                 .category(category)
                 .build();
 
-        return mapToProductResponse(productrepo.save(product));
+        try {
+            return mapToProductResponse(productrepo.save(product));
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new AppException(ProductErrorCode.PRODUCT_SKU_ALREADY_EXISTS);
+        }
     }
 
     // Pagination & Search
@@ -67,7 +71,7 @@ public class ProductService {
         
         // Kiểm tra SKU duy nhất (nếu thay đổi SKU)
         if(!product.getSku().equals(request.getSku()) && productrepo.existsBySku(request.getSku())) {
-            throw new AppException(ProductErrorCode.SKU_ALREADY_EXISTS);
+            throw new AppException(ProductErrorCode.PRODUCT_SKU_ALREADY_EXISTS);
         }
 
         Category category = categoryRepo.findById(request.getCategoryId())

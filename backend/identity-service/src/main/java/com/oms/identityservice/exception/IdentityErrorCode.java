@@ -11,7 +11,8 @@ public enum IdentityErrorCode implements ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "Tài khoản không tồn tại trên hệ thống"),
     USER_EXISTED(HttpStatus.CONFLICT, "Tên đăng nhập này đã tồn tại trên hệ thống"),
     EMAIL_EXISTED(HttpStatus.CONFLICT, "Email này đã được sử dụng bởi một tài khoản khác"),
-    RABBITMQ_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi gửi tin nhắn đồng bộ dữ liệu");
+    RABBITMQ_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi gửi tin nhắn đồng bộ dữ liệu"),
+    UNCATEGORIZED_EXCEPTION(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống không xác định");
 
     private final HttpStatus httpStatus;
     private final String message;

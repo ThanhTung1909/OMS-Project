@@ -12,11 +12,11 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMQConfig {
 
     // Queue names
-    public static final String INVENTORY_CONFIRM_QUEUE = "inventory.command.confirm";
-    public static final String INVENTORY_ROLLBACK_QUEUE = "inventory.command.rollback";
+    public static final String INVENTORY_CONFIRM_QUEUE = "q.inventory.confirm";
+    public static final String INVENTORY_ROLLBACK_QUEUE = "q.inventory.rollback";
 
     // Exchange name
-    public static final String INVENTORY_EXCHANGE = "inventory.exchange";
+    public static final String OMS_EXCHANGE = "oms.exchange";
 
     // Routing keys
     public static final String CONFIRM_ROUTING_KEY = "inventory.command.confirm";
@@ -37,7 +37,7 @@ public class RabbitMQConfig {
     // ===== EXCHANGE =====
     @Bean
     public TopicExchange inventoryExchange() {
-        return new TopicExchange(INVENTORY_EXCHANGE, true, false);
+        return new TopicExchange(OMS_EXCHANGE, true, false);
     }
 
     // ===== BINDINGS =====

@@ -45,9 +45,7 @@ public class Inventory {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        availableQuantity = 0;
-        reservedQuantity = 0;
-        lowStockThreshold = 10; // Mặc định là 10
+        if (lowStockThreshold == 0) lowStockThreshold = 10; 
     }
 
     @PreUpdate

@@ -17,6 +17,7 @@ public class UpdateInventoryResponse {
     private int availableQuantity;
     private int reservedQuantity;
     private int totalQuantity;
+    private int lowStockThreshold;
     private LocalDateTime updatedAt;
     private String message;
 }

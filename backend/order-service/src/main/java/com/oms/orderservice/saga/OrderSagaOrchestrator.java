@@ -1,21 +1,19 @@
 package com.oms.orderservice.saga;
 
-import java.time.LocalDateTime;
-
+import com.oms.common.constant.RabbitMQConstants;
+import com.oms.common.enums.OrderStatus;
+import com.oms.orderservice.dto.InventoryCommand;
+import com.oms.orderservice.dto.PaymentResultPayload;
+import com.oms.orderservice.entity.Order;
+import com.oms.orderservice.repository.OrderRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
-import com.oms.orderservice.dto.InventoryCommand;
-import com.oms.orderservice.dto.PaymentResultPayload;
-import com.oms.orderservice.entity.Order;
-import com.oms.orderservice.entity.OrderStatus;
-import com.oms.orderservice.repository.OrderRepository;
-import com.oms.orderservice.config.RabbitMQConfig;
-
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
@@ -24,7 +22,7 @@ public class OrderSagaOrchestrator {
     private final OrderRepository orderRepository;
     private final RabbitTemplate rabbitTemplate;
 
-    @RabbitListener(queues = RabbitMQConfig.PAYMENT_REPLY_QUEUE)
+    @RabbitListener(queues = RabbitMQConstants.PAYMENT_REPLY_RESULT)
     @Transactional
     public void handlePaymentResult(PaymentResultPayload payload) {
         if (payload == null || payload.getOrderId() == null) return;
@@ -32,26 +30,31 @@ public class OrderSagaOrchestrator {
         Order order = orderRepository.findById(payload.getOrderId())
                 .orElseThrow(() -> new RuntimeException("Order not found: " + payload.getOrderId()));
 
-        // Idempotency check: Chỉ xử lý nếu đơn hàng đang chờ thanh toán
+        // Idempotency check
         if (order.getStatus() != OrderStatus.PAYMENT_PENDING) {
-            log.info("Saga: Đơn hàng {} đã được xử lý trước đó (Status: {}). Bỏ qua.", 
+            log.info("[SAGA] Order {} already processed (Status: {}). Skipping.", 
                      order.getId(), order.getStatus());
             return;
         }
 
         if ("COMPLETED".equalsIgnoreCase(payload.getStatus())) {
-            log.info("Saga: Thanh toán thành công cho đơn {}. Bắt đầu CONFIRM kho.", order.getId());
+            log.info("[SAGA] Payment COMPLETED for order {}. Initiating inventory CONFIRM.", order.getId());
             order.setStatus(OrderStatus.CONFIRMED);
             order.setPaymentId(payload.getTransactionId());
             
-            InventoryCommand confirmCmd = new InventoryCommand(order.getId(), "CONFIRM");
-            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "inventory.command.confirm", confirmCmd);
+            order.getOrderItems().forEach(item -> {
+                InventoryCommand confirmCmd = new InventoryCommand(order.getId(), item.getProductId(), item.getQuantity(), "CONFIRM");
+                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_CONFIRM, confirmCmd);
+            });
+            
         } else {
-            log.info("Saga: Thanh toán thất bại cho đơn {}. Bắt đầu ROLLBACK kho.", order.getId());
+            log.info("[SAGA] Payment FAILED for order {}. Initiating inventory ROLLBACK.", order.getId());
             order.setStatus(OrderStatus.CANCELLED);
             
-            InventoryCommand rollbackCmd = new InventoryCommand(order.getId(), "ROLLBACK");
-            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "inventory.command.rollback", rollbackCmd);
+            order.getOrderItems().forEach(item -> {
+                InventoryCommand rollbackCmd = new InventoryCommand(order.getId(), item.getProductId(), item.getQuantity(), "ROLLBACK");
+                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK, rollbackCmd);
+            });
         }
         
         order.setUpdatedAt(LocalDateTime.now());

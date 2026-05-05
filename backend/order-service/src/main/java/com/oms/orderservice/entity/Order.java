@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.oms.common.enums.OrderStatus;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,6 +22,8 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     private String userId;
+    
+    @Enumerated(EnumType.STRING)
     private OrderStatus status;
     private BigDecimal totalAmount;
     private String paymentId;

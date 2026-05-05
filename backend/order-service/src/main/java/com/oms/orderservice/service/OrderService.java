@@ -1,21 +1,25 @@
 package com.oms.orderservice.service;
 
+import com.oms.common.ApiResponse;
 import com.oms.common.AppException;
 import com.oms.common.CommonErrorCode;
+import com.oms.common.constant.RabbitMQConstants;
+import com.oms.common.enums.OrderStatus;
 import com.oms.orderservice.client.InventoryClient;
-import com.oms.orderservice.config.RabbitMQConfig;
+import com.oms.orderservice.client.ProductClient;
 import com.oms.orderservice.dto.InventoryCommand;
-import com.oms.orderservice.dto.InventoryUpdateRequest;
+import com.oms.orderservice.dto.InventoryReserveRequest;
 import com.oms.orderservice.dto.OrderItemRequest;
 import com.oms.orderservice.dto.OrderRequest;
 import com.oms.orderservice.dto.OrderResponse;
 import com.oms.orderservice.dto.PaymentCommand;
+import com.oms.orderservice.dto.ProductResponse;
 import com.oms.orderservice.entity.Order;
 import com.oms.orderservice.entity.OrderAddress;
 import com.oms.orderservice.entity.OrderItem;
-import com.oms.orderservice.entity.OrderStatus;
 import com.oms.orderservice.exception.OrderErrorCode;
 import com.oms.orderservice.repository.OrderRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,9 +39,9 @@ import java.util.stream.Collectors;
 public class OrderService {
     private final OrderRepository orderRepository;
     private final InventoryClient inventoryClient;
+    private final ProductClient productClient;
     private final RabbitTemplate rabbitTemplate;
 
-    // 1. Lấy lịch sử đơn hàng
     public List<OrderResponse> getMyOrders(String userId) {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(order -> OrderResponse.builder()
@@ -47,15 +52,38 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
-    // 2. Tạo đơn hàng với Local Compensation
     @Transactional
     public String createOrder(OrderRequest request) {
-        // Tạo UUID trước để dùng cho compensation nếu cần
         String orderId = java.util.UUID.randomUUID().toString();
 
-        BigDecimal totalPrice = request.getOrderItems().stream()
-                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        List<OrderItem> orderItems = new ArrayList<>();
+        List<InventoryReserveRequest> reserveRequests = new ArrayList<>();
+
+        for (OrderItemRequest itemReq : request.getOrderItems()) {
+            // Lấy thông tin giá chuẩn từ Product Service, bảo mật giá tuyệt đối
+            ApiResponse<ProductResponse> productApiRes = productClient.getProductById(itemReq.getProductId());
+            if (productApiRes == null || !productApiRes.isSuccess() || productApiRes.getResult() == null) {
+                throw new AppException(OrderErrorCode.ORDER_CREATION_FAILED); // Hoặc PRODUCT_NOT_FOUND
+            }
+            ProductResponse product = productApiRes.getResult();
+            BigDecimal itemPrice = product.getPrice();
+            
+            totalPrice = totalPrice.add(itemPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+
+            OrderItem orderItem = OrderItem.builder()
+                    .productId(product.getId())
+                    .productName(product.getName())
+                    .price(itemPrice)
+                    .quantity(itemReq.getQuantity())
+                    .build();
+            orderItems.add(orderItem);
+
+            InventoryReserveRequest reserveReq = new InventoryReserveRequest();
+            reserveReq.setProductId(product.getId());
+            reserveReq.setQuantity(itemReq.getQuantity());
+            reserveRequests.add(reserveReq);
+        }
 
         OrderAddress shippingAddress = new OrderAddress();
         BeanUtils.copyProperties(request.getAddress(), shippingAddress);
@@ -70,43 +98,25 @@ public class OrderService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
-        List<OrderItem> orderItems = request.getOrderItems().stream()
-                .map(itemReq -> OrderItem.builder()
-                        .productId(itemReq.getProductId())
-                        .productName(itemReq.getProductName())
-                        .price(itemReq.getPrice())
-                        .quantity(itemReq.getQuantity())
-                        .order(order)
-                        .build())
-                .collect(Collectors.toList());
+        orderItems.forEach(item -> item.setOrder(order));
         order.setOrderItems(orderItems);
-
-        // 1. Chuyển sang Bulk Request
-        List<InventoryUpdateRequest> bulkRequests = request.getOrderItems().stream()
-                .map(item -> InventoryUpdateRequest.builder()
-                        .productId(item.getProductId())
-                        .quantity(item.getQuantity())
-                        .type("RESERVE")
-                        .build())
-                .collect(Collectors.toList());
 
         boolean inventoryReserved = false;
         try {
-            // 2. Gọi Bulk API duy nhất một lần
-            inventoryClient.updateInventory(bulkRequests);
+            // Gọi bulk api duy nhất 1 lần để giữ kho
+            reserveInventory(reserveRequests);
             inventoryReserved = true;
 
-            // Bước B: Lưu DB
             orderRepository.save(order);
 
-            // 3. Gửi lệnh thanh toán
+            // Bắn event payment
             PaymentCommand command = PaymentCommand.builder()
                     .orderId(orderId)
                     .userId(request.getUserId())
                     .amount(totalPrice)
                     .description("Thanh toán đơn hàng: " + orderId)
                     .build();
-            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "payment.command.create", command);
+            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.PAYMENT_COMMAND_CREATE, command);
 
             log.info("Order created with status PAYMENT_PENDING. Command sent to Payment Service for OrderId: {}", orderId);
 
@@ -116,17 +126,26 @@ public class OrderService {
             log.error("Lỗi tạo đơn hàng {}: {}", orderId, ex.getMessage());
 
             if (inventoryReserved) {
-                // Sử dụng Command Object thay vì String
-                InventoryCommand rollbackCmd = new InventoryCommand(orderId, "ROLLBACK");
-                rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "inventory.command.rollback", rollbackCmd);
+                // Rollback lại kho cho từng item
+                for (OrderItem item : orderItems) {
+                    InventoryCommand rollbackCmd = new InventoryCommand(orderId, item.getProductId(), item.getQuantity(), "ROLLBACK");
+                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK, rollbackCmd);
+                }
             }
-
-            // Throw exception để rollback DB Transaction (Order sẽ không bị lưu record lỗi)
             throw new AppException(OrderErrorCode.ORDER_CREATION_FAILED);
         }
     }
 
-    // 3. Duyệt đơn (Prepare)
+    @CircuitBreaker(name = "inventoryCB", fallbackMethod = "fallbackReserve")
+    public void reserveInventory(List<InventoryReserveRequest> requests) {
+        inventoryClient.reserveBulk(requests);
+    }
+
+    public void fallbackReserve(List<InventoryReserveRequest> requests, Throwable t) {
+        log.error("Inventory Service is down. Cannot reserve inventory.", t);
+        throw new AppException(OrderErrorCode.ORDER_CREATION_FAILED);
+    }
+
     @Transactional
     public void prepareOrder(String orderId) {
         Order order = orderRepository.findById(orderId)
@@ -141,7 +160,6 @@ public class OrderService {
         orderRepository.save(order);
     }
 
-    // 4. Hủy đơn (Cancel)
     @Transactional
     public void cancelOrder(String orderId, String userId) {
         Order order = orderRepository.findById(orderId)
@@ -151,7 +169,6 @@ public class OrderService {
             throw new AppException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        // Chỉ được hủy khi đang chờ thanh toán hoặc mới xác nhận
         if (order.getStatus() != OrderStatus.PAYMENT_PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
             throw new AppException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
@@ -160,9 +177,10 @@ public class OrderService {
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
 
-        // Bắn event trả hàng về kho
-        InventoryCommand rollbackCmd = new InventoryCommand(orderId, "ROLLBACK");
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "inventory.command.rollback", rollbackCmd);
+        for (OrderItem item : order.getOrderItems()) {
+            InventoryCommand rollbackCmd = new InventoryCommand(orderId, item.getProductId(), item.getQuantity(), "ROLLBACK");
+            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK, rollbackCmd);
+        }
     }
 
     public OrderResponse getOrder(String orderId) {

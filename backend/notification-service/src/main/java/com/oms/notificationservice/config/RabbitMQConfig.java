@@ -1,4 +1,4 @@
-package com.oms.profile.config;
+package com.oms.notificationservice.config;
 
 import com.oms.common.constant.RabbitMQConstants;
 import org.springframework.amqp.core.Binding;
@@ -26,7 +26,7 @@ public class RabbitMQConfig {
     @Value("${spring.rabbitmq.password:guest}")
     private String password;
 
-    public static final String QUEUE_PROFILE_ACCOUNT_CREATE = "q.profile.account.create";
+    public static final String QUEUE_NOTIFICATION_ACCOUNT_CREATE = "q.notification.account.create";
 
     @Bean
     public TopicExchange omsExchange() {
@@ -34,13 +34,13 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Queue profileAccountCreateQueue() {
-        return new Queue(QUEUE_PROFILE_ACCOUNT_CREATE, true);
+    public Queue notificationAccountCreateQueue() {
+        return new Queue(QUEUE_NOTIFICATION_ACCOUNT_CREATE, true);
     }
 
     @Bean
-    public Binding bindingProfileAccountCreate(Queue profileAccountCreateQueue, TopicExchange omsExchange) {
-        return BindingBuilder.bind(profileAccountCreateQueue)
+    public Binding bindingNotificationAccountCreate(Queue notificationAccountCreateQueue, TopicExchange omsExchange) {
+        return BindingBuilder.bind(notificationAccountCreateQueue)
                 .to(omsExchange)
                 .with(RabbitMQConstants.IDENTITY_ACCOUNT_CREATED);
     }

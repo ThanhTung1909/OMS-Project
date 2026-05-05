@@ -1,6 +1,6 @@
 package com.oms.paymentservice.service;
 
-import com.oms.paymentservice.config.RabbitMqConfig;
+import com.oms.common.constant.RabbitMQConstants;
 import com.oms.paymentservice.dto.PaymentEvent;
 import com.oms.paymentservice.dto.PaymentRequest;
 import com.oms.paymentservice.dto.PaymentResponse;
@@ -11,6 +11,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -27,24 +28,35 @@ public class PaymentService {
 
     @Transactional
     public PaymentResponse pay(PaymentRequest request) {
+        return processPayment(request.orderId(), request.amount());
+    }
+
+    @Transactional
+    public void processPaymentCommand(String orderId, BigDecimal amount) {
+        processPayment(orderId, amount);
+    }
+
+    private PaymentResponse processPayment(String orderId, BigDecimal amount) {
         int randomPercent = ThreadLocalRandom.current().nextInt(100);
         boolean isSuccess = randomPercent < 80;
         PaymentStatus dbStatus = isSuccess ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
 
         String transactionId = UUID.randomUUID().toString();
 
-        Payment payment = new Payment();
-        payment.setOrderId(request.orderId());
-        payment.setAmount(request.amount());
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElse(new Payment());
+        
+        payment.setOrderId(orderId);
+        payment.setAmount(amount);
         payment.setStatus(dbStatus);
         payment.setTransactionId(transactionId);
         paymentRepository.save(payment);
 
         String eventStatus = dbStatus.name();
-        PaymentEvent paymentEvent = new PaymentEvent(request.orderId(), eventStatus, transactionId);
+        PaymentEvent paymentEvent = new PaymentEvent(orderId, eventStatus, transactionId);
         rabbitTemplate.convertAndSend(
-                RabbitMqConfig.PAYMENT_EXCHANGE,
-                RabbitMqConfig.PAYMENT_ROUTING_KEY,
+                RabbitMQConstants.EXCHANGE_NAME,
+                RabbitMQConstants.PAYMENT_REPLY_RESULT,
                 paymentEvent
         );
 

@@ -6,9 +6,6 @@ import com.oms.productservice.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import com.oms.common.ApiResponse;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,18 +32,27 @@ public class ProductController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ProductResponse>>> getAllProduct(
+            @org.springframework.data.web.PageableDefault(size = 10, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) 
+            org.springframework.data.domain.Pageable pageable) {
+        
+        Page<ProductResponse> result = productService.getAllProducts(null, null, null, null, pageable);
+        
+        return ResponseEntity.ok(ApiResponse.<Page<ProductResponse>>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Thành công")
+                .result(result)
+                .build());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<Page<ProductResponse>>> searchProduct(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String categoryId,
             @RequestParam(required = false) java.math.BigDecimal minPrice,
             @RequestParam(required = false) java.math.BigDecimal maxPrice,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort) {
-        
-        // Xử lý sort từ string (ví dụ: "price,asc")
-        String[] sortParams = sort.split(",");
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortParams[1].equalsIgnoreCase("desc") ? 
-                Sort.Direction.DESC : Sort.Direction.ASC, sortParams[0]));
+            @org.springframework.data.web.PageableDefault(size = 10, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) 
+            org.springframework.data.domain.Pageable pageable) {
         
         Page<ProductResponse> result = productService.getAllProducts(name, categoryId, minPrice, maxPrice, pageable);
         

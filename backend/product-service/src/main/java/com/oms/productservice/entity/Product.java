@@ -29,6 +29,7 @@ public class Product {
 
     private BigDecimal price;
 
+    @Column(unique = true)
     private String sku;
 
     @ElementCollection

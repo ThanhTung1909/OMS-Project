@@ -42,14 +42,13 @@ public class OrderService {
     private final ProductClient productClient;
     private final RabbitTemplate rabbitTemplate;
 
-    public List<OrderResponse> getMyOrders(String userId) {
-        return orderRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+    public org.springframework.data.domain.Page<OrderResponse> getMyOrders(String userId, org.springframework.data.domain.Pageable pageable) {
+        return orderRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(order -> OrderResponse.builder()
                         .orderId(order.getId())
                         .status(order.getStatus().name())
                         .message("Đơn hàng tạo lúc: " + order.getCreatedAt())
-                        .build())
-                .collect(Collectors.toList());
+                        .build());
     }
 
     @Transactional
@@ -169,7 +168,7 @@ public class OrderService {
             throw new AppException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        if (order.getStatus() != OrderStatus.PAYMENT_PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
+        if (order.getStatus() != OrderStatus.PAYMENT_PENDING) {
             throw new AppException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
 

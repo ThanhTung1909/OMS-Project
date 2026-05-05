@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -69,15 +70,18 @@ public class OrderController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<List<OrderResponse>>> getMyOrders(@RequestHeader("X-Account-Id") String userId) {
-        return ResponseEntity.ok(ApiResponse.<List<OrderResponse>>builder()
+    public ResponseEntity<ApiResponse<Page<OrderResponse>>> getMyOrders(
+            @RequestHeader("X-Account-Id") String userId,
+            org.springframework.data.domain.Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.<Page<OrderResponse>>builder()
                 .success(true)
                 .status(HttpStatus.OK.value())
                 .message("Thành công")
-                .result(orderService.getMyOrders(userId))
+                .result(orderService.getMyOrders(userId, pageable))
                 .build());
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     @PutMapping("/{id}/prepare")
     public ResponseEntity<ApiResponse<Void>> prepareOrder(@PathVariable String id) {
         orderService.prepareOrder(id);

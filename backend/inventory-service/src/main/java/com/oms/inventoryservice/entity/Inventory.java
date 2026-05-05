@@ -35,6 +35,9 @@ public class Inventory {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "low_stock_threshold", nullable = false)
+    private int lowStockThreshold;
+
     @Version // dùng để quản lý phiên bản của thực thể, giúp tránh xung đột khi nhiều người dùng cùng cập nhật một bản ghi
     private Long version;
 
@@ -44,6 +47,7 @@ public class Inventory {
         updatedAt = LocalDateTime.now();
         availableQuantity = 0;
         reservedQuantity = 0;
+        lowStockThreshold = 10; // Mặc định là 10
     }
 
     @PreUpdate

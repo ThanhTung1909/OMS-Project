@@ -12,7 +12,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.oms.common.AppException;
 import com.oms.inventoryservice.exception.InventoryErrorCode;
 import com.oms.common.CommonErrorCode;
+import com.oms.inventoryservice.client.ProductClient;
+import com.oms.inventoryservice.entity.InventoryAuditLog;
+import com.oms.inventoryservice.repository.InventoryAuditLogRepository;
+import com.oms.common.ApiResponse;
 import java.util.Optional;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -20,6 +26,12 @@ public class InventoryService {
 
     @Autowired
     private InventoryRepository inventoryRepository;
+
+    @Autowired
+    private ProductClient productClient;
+
+    @Autowired
+    private InventoryAuditLogRepository auditLogRepository;
 
     /**
      * Cập nhật số lượng tồn kho theo loại
@@ -52,6 +64,17 @@ public class InventoryService {
             case "ADD":
                 // Thêm số lượng có sẵn (nhập kho)
                 if (request.getQuantity() > 0) {
+                    // Xác thực sản phẩm tồn tại qua Feign
+                    try {
+                        ApiResponse<Object> productResponse = productClient.getProductById(request.getProductId());
+                        if (productResponse == null || !productResponse.isSuccess()) {
+                            throw new AppException(CommonErrorCode.NOT_FOUND);
+                        }
+                    } catch (Exception e) {
+                        log.error("Error verifying product with Product Service: {}", e.getMessage());
+                        throw new AppException(CommonErrorCode.NOT_FOUND);
+                    }
+
                     inventory.setAvailableQuantity(inventory.getAvailableQuantity() + request.getQuantity());
                     message = "Added " + request.getQuantity() + " units to available quantity";
                 } else {
@@ -99,6 +122,15 @@ public class InventoryService {
         Inventory updatedInventory = inventoryRepository.save(inventory);
         log.info("Inventory updated successfully for product: {}", request.getProductId());
 
+        // Lưu Audit Log
+        InventoryAuditLog auditLog = InventoryAuditLog.builder()
+                .productId(request.getProductId())
+                .quantity(request.getQuantity())
+                .type(request.getType())
+                .message(message)
+                .build();
+        auditLogRepository.save(auditLog);
+
         // Trả về response
         return UpdateInventoryResponse.builder()
                 .id(updatedInventory.getId())
@@ -137,5 +169,22 @@ public class InventoryService {
                 .updatedAt(inv.getUpdatedAt())
                 .message("Inventory retrieved successfully")
                 .build();
+    }
+    /**
+     * Lấy danh sách sản phẩm sắp hết hàng
+     */
+    public List<UpdateInventoryResponse> getLowStockProducts() {
+        return inventoryRepository.findAll().stream()
+                .filter(inv -> inv.getAvailableQuantity() < inv.getLowStockThreshold())
+                .map(inv -> UpdateInventoryResponse.builder()
+                        .id(inv.getId())
+                        .productId(inv.getProductId())
+                        .availableQuantity(inv.getAvailableQuantity())
+                        .reservedQuantity(inv.getReservedQuantity())
+                        .totalQuantity(inv.getAvailableQuantity() + inv.getReservedQuantity())
+                        .updatedAt(inv.getUpdatedAt())
+                        .message("LOW STOCK ALERT: Below threshold of " + inv.getLowStockThreshold())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

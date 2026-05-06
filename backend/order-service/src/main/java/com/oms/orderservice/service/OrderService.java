@@ -46,6 +46,7 @@ public class OrderService {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(order -> OrderResponse.builder()
                         .orderId(order.getId())
+                        .userId(order.getUserId())
                         .status(order.getStatus().name())
                         .message("Đơn hàng tạo lúc: " + order.getCreatedAt())
                         .build());
@@ -217,6 +218,7 @@ public class OrderService {
 
         return OrderResponse.builder()
                 .orderId(order.getId())
+                .userId(order.getUserId())
                 .status(order.getStatus().name())
                 .message("Thông tin đơn hàng")
                 .build();

@@ -1,4 +1,4 @@
-package com.oms.orderservice.dto;
+package com.oms.notificationservice.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

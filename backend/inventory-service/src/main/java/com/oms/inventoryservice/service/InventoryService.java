@@ -95,6 +95,17 @@ public class InventoryService {
             case "RESERVE":
                 // Đặt trước (chuyển từ available sang reserved)
                 if (request.getQuantity() > 0 && inventory.getAvailableQuantity() >= request.getQuantity()) {
+                    // Xác thực sản phẩm tồn tại qua Feign trước khi reserve
+                    try {
+                        ApiResponse<Object> productResponse = productClient.getProductById(request.getProductId());
+                        if (productResponse == null || !productResponse.isSuccess()) {
+                            throw new AppException(CommonErrorCode.NOT_FOUND);
+                        }
+                    } catch (Exception e) {
+                        log.error("Error verifying product with Product Service for RESERVE: {}", e.getMessage());
+                        throw new AppException(CommonErrorCode.NOT_FOUND);
+                    }
+
                     inventory.setAvailableQuantity(inventory.getAvailableQuantity() - request.getQuantity());
                     inventory.setReservedQuantity(inventory.getReservedQuantity() + request.getQuantity());
                     message = "Reserved " + request.getQuantity() + " units";

@@ -7,6 +7,8 @@ import com.oms.inventoryservice.entity.Inventory;
 import com.oms.inventoryservice.entity.ProcessedEvent;
 import com.oms.inventoryservice.repository.InventoryRepository;
 import com.oms.inventoryservice.repository.ProcessedEventRepository;
+import com.oms.inventoryservice.entity.InventoryAuditLog;
+import com.oms.inventoryservice.repository.InventoryAuditLogRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,12 +31,15 @@ public class InventoryEventListener {
     @Autowired
     private ProcessedEventRepository processedEventRepository;
 
+    @Autowired
+    private InventoryAuditLogRepository auditLogRepository;
+
     /**
      * Task 3.9: Xử lý Confirm Order Command
      * Logic: Khách đã trả tiền. Trừ thẳng vào reservedQuantity
      * Bắt buộc: Idempotency check
      */
-    @RabbitListener(queues = RabbitMQConfig.INVENTORY_CONFIRM_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_INVENTORY_CONFIRM)
     @Transactional
     public void handleConfirmOrder(ConfirmOrderCommand command) {
         log.info("Received CONFIRM command: {}", command);
@@ -73,6 +78,14 @@ public class InventoryEventListener {
             log.info("Inventory confirmed: productId={}, quantity reduced={}, remainingReserved={}",
                     command.getProductId(), command.getQuantity(), inventory.getReservedQuantity());
 
+            // Lưu Audit Log
+            auditLogRepository.save(InventoryAuditLog.builder()
+                    .productId(command.getProductId())
+                    .quantity(command.getQuantity())
+                    .type("CONFIRM")
+                    .message("Order confirmed: " + command.getOrderId())
+                    .build());
+
             // BƯỚC 5: Lưu event đã xử lý (Idempotency tracking)
             ProcessedEvent processedEvent = ProcessedEvent.builder()
                     .orderId(command.getOrderId())
@@ -96,7 +109,7 @@ public class InventoryEventListener {
      * Logic: Đơn huỷ. Trả lại hàng lên kệ: availableQuantity tăng lại, reservedQuantity giảm
      * Bắt buộc: Idempotency check
      */
-    @RabbitListener(queues = RabbitMQConfig.INVENTORY_ROLLBACK_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_INVENTORY_ROLLBACK)
     @Transactional
     public void handleRollbackOrder(RollbackOrderCommand command) {
         log.info("Received ROLLBACK command: {}", command);
@@ -136,6 +149,14 @@ public class InventoryEventListener {
             log.info("Inventory rollback: productId={}, quantity restored={}, available now={}, reserved now={}",
                     command.getProductId(), command.getQuantity(),
                     inventory.getAvailableQuantity(), inventory.getReservedQuantity());
+
+            // Lưu Audit Log
+            auditLogRepository.save(InventoryAuditLog.builder()
+                    .productId(command.getProductId())
+                    .quantity(command.getQuantity())
+                    .type("ROLLBACK")
+                    .message("Order rollback: " + command.getOrderId())
+                    .build());
 
             // BƯỚC 5: Lưu event đã xử lý (Idempotency tracking)
             ProcessedEvent processedEvent = ProcessedEvent.builder()

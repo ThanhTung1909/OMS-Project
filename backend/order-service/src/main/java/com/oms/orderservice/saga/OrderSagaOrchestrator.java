@@ -1,7 +1,9 @@
 package com.oms.orderservice.saga;
 
 import com.oms.common.constant.RabbitMQConstants;
+import com.oms.orderservice.config.RabbitMQConfig;
 import com.oms.common.enums.OrderStatus;
+import com.oms.orderservice.dto.DeliveryUpdatePayload;
 import com.oms.orderservice.dto.InventoryCommand;
 import com.oms.orderservice.dto.PaymentResultPayload;
 import com.oms.orderservice.entity.Order;
@@ -22,7 +24,7 @@ public class OrderSagaOrchestrator {
     private final OrderRepository orderRepository;
     private final RabbitTemplate rabbitTemplate;
 
-    @RabbitListener(queues = RabbitMQConstants.PAYMENT_REPLY_RESULT)
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_PAYMENT_REPLY)
     @Transactional
     public void handlePaymentResult(PaymentResultPayload payload) {
         if (payload == null || payload.getOrderId() == null) return;
@@ -55,6 +57,32 @@ public class OrderSagaOrchestrator {
                 InventoryCommand rollbackCmd = new InventoryCommand(order.getId(), item.getProductId(), item.getQuantity(), "ROLLBACK");
                 rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK, rollbackCmd);
             });
+        }
+        
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_DELIVERY_STATUS)
+    @Transactional
+    public void handleDeliveryStatusUpdate(DeliveryUpdatePayload payload) {
+        if (payload == null || payload.getOrderId() == null || payload.getStatus() == null) return;
+
+        String orderId = payload.getOrderId();
+        String status = payload.getStatus();
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        if ("COMPLETED".equalsIgnoreCase(status)) {
+            log.info("[SAGA] Delivery COMPLETED for order {}. Order is now COMPLETED.", orderId);
+            order.setStatus(OrderStatus.COMPLETED);
+            order.setDeliveryId(payload.getDeliveryId());
+        } else if ("FAILED".equalsIgnoreCase(status)) {
+            String failReason = payload.getFailReason() != null ? payload.getFailReason() : "Unknown delivery error";
+            log.info("[SAGA] Delivery FAILED for order {}. Reason: {}. Order is now CANCELLED.", orderId, failReason);
+            order.setStatus(OrderStatus.CANCELLED);
+            order.setErrorMessage("Giao hàng thất bại: " + failReason);
         }
         
         order.setUpdatedAt(LocalDateTime.now());

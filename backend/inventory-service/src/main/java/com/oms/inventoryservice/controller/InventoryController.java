@@ -52,6 +52,16 @@ public class InventoryController {
         );
     }
 
+    @GetMapping("/low-stock")
+    public ResponseEntity<ApiResponse<java.util.List<UpdateInventoryResponse>>> getLowStockAlerts() {
+        return ResponseEntity.ok(ApiResponse.<java.util.List<UpdateInventoryResponse>>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Thành công")
+                .result(inventoryService.getLowStockProducts())
+                .build());
+    }
+
     /**
      * Health check
      */

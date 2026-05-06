@@ -27,6 +27,8 @@ public class RabbitMQConfig {
     private String password;
 
     public static final String QUEUE_NOTIFICATION_ACCOUNT_CREATE = "q.notification.account.create";
+    public static final String QUEUE_NOTIFICATION_ORDER_STATUS = "q.notification.order.status";
+    public static final String QUEUE_NOTIFICATION_DELIVERY_STATUS = "q.notification.delivery.status";
 
     @Bean
     public TopicExchange omsExchange() {
@@ -39,10 +41,34 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue notificationOrderStatusQueue() {
+        return new Queue(QUEUE_NOTIFICATION_ORDER_STATUS, true);
+    }
+
+    @Bean
+    public Queue notificationDeliveryStatusQueue() {
+        return new Queue(QUEUE_NOTIFICATION_DELIVERY_STATUS, true);
+    }
+
+    @Bean
     public Binding bindingNotificationAccountCreate(Queue notificationAccountCreateQueue, TopicExchange omsExchange) {
         return BindingBuilder.bind(notificationAccountCreateQueue)
                 .to(omsExchange)
                 .with(RabbitMQConstants.IDENTITY_ACCOUNT_CREATED);
+    }
+
+    @Bean
+    public Binding bindingNotificationOrderStatus(Queue notificationOrderStatusQueue, TopicExchange omsExchange) {
+        return BindingBuilder.bind(notificationOrderStatusQueue)
+                .to(omsExchange)
+                .with(RabbitMQConstants.NOTIFICATION_ORDER_STATUS);
+    }
+
+    @Bean
+    public Binding bindingNotificationDeliveryStatus(Queue notificationDeliveryStatusQueue, TopicExchange omsExchange) {
+        return BindingBuilder.bind(notificationDeliveryStatusQueue)
+                .to(omsExchange)
+                .with(RabbitMQConstants.DELIVERY_STATUS_UPDATE);
     }
 
     @Bean

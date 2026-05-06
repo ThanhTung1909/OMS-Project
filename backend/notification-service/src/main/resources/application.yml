@@ -18,6 +18,13 @@ spring:
     port: 5672
     username: user
     password: password
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 3000ms # Thử lại sau 3 giây
+          max-attempts: 3        # Tối đa 3 lần
+          multiplier: 2.0        # Tăng dần thời gian chờ
   mail:
     host: smtp.gmail.com
     port: 587

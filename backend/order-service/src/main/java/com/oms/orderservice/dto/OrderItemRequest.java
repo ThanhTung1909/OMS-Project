@@ -21,8 +21,6 @@ public class OrderItemRequest {
 
     private String productName;
 
-    @NotNull(message = "Price is required")
-    @Positive(message = "Price must be positive")
     private BigDecimal price;
 
     @Min(value = 1, message = "Quantity must be at least 1")

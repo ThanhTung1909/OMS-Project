@@ -11,7 +11,7 @@ spring:
         password: ${SPRING_RABBITMQ_PASSWORD:password}
 
     datasource:
-        url: jdbc:mariadb://localhost:3306/db_identity
+        url: jdbc:mariadb://${SPRING_DATASOURCE_HOST:mariadb}:3306/db_identity
         username: root
         password: root
         driver-class-name: org.mariadb.jdbc.Driver
@@ -23,7 +23,7 @@ spring:
 eureka:
     client:
         service-url:
-          defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+          defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-server:8761/eureka/}
     instance:
         prefer-ip-address: true
 jwt:

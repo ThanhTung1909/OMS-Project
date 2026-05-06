@@ -198,4 +198,20 @@ public class InventoryService {
                         .build())
                 .collect(Collectors.toList());
     }
+
+    /**
+     * Giữ kho hàng loạt (dùng cho tạo đơn hàng)
+     */
+    @Transactional
+    public void reserveBulk(List<com.oms.inventoryservice.dto.InventoryReserveRequest> requests) {
+        log.info("Processing bulk reservation for {} items", requests.size());
+        for (com.oms.inventoryservice.dto.InventoryReserveRequest req : requests) {
+            UpdateInventoryRequest updateReq = UpdateInventoryRequest.builder()
+                    .productId(req.getProductId())
+                    .quantity(req.getQuantity())
+                    .type("RESERVE")
+                    .build();
+            updateInventory(updateReq);
+        }
+    }
 }

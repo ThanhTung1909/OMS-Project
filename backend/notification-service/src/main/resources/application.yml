@@ -5,7 +5,7 @@ spring:
   application:
     name: notification-service
   datasource:
-    url: jdbc:mariadb://localhost:3306/db_notification
+    url: jdbc:mariadb://${SPRING_DATASOURCE_HOST:mariadb}:3306/db_notification
     username: root
     password: root
     driver-class-name: org.mariadb.jdbc.Driver
@@ -14,17 +14,17 @@ spring:
       ddl-auto: update
     show-sql: true
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: user
-    password: password
+    host: ${SPRING_RABBITMQ_HOST:rabbitmq}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:user}
+    password: ${SPRING_RABBITMQ_PASSWORD:password}
     listener:
       simple:
         retry:
           enabled: true
-          initial-interval: 3000ms # Thử lại sau 3 giây
-          max-attempts: 3        # Tối đa 3 lần
-          multiplier: 2.0        # Tăng dần thời gian chờ
+          initial-interval: 10000ms # Bắt đầu thử lại sau 10 giây
+          max-attempts: 5           # Thử lại tối đa 5 lần
+          multiplier: 2.0           # Tăng dần thời gian (10s, 20s, 40s, 80s...)
   mail:
     host: smtp.gmail.com
     port: 587
@@ -40,7 +40,9 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
 
 logging:
   level:

@@ -61,32 +61,41 @@ public class NotificationListener {
     public void handleDeliveryStatusUpdate(DeliveryUpdatePayload payload) {
         log.info("Nhận sự kiện vận chuyển cho đơn hàng: {}", payload.getOrderId());
 
-        // Bước 1: Gọi Order Service để lấy userId
-        var orderRes = orderClient.getOrderById(payload.getOrderId());
-        if (orderRes == null || !orderRes.isSuccess() || orderRes.getResult() == null) {
-            log.error("LỖI DỮ LIỆU: Không tìm thấy đơn hàng {} để gửi thông báo. Bỏ qua để tránh treo Queue.", payload.getOrderId());
-            return; // Lỗi logic (404) -> Không retry vì dữ liệu không hợp lệ
+        try {
+            // Bước 1: Gọi Order Service để lấy userId
+            log.info("[RETRY] Đang lấy thông tin đơn hàng từ Order Service...");
+            var orderRes = orderClient.getOrderById(payload.getOrderId());
+            if (orderRes == null || !orderRes.isSuccess() || orderRes.getResult() == null) {
+                log.error("LỖI DỮ LIỆU: Không tìm thấy đơn hàng {} để gửi thông báo. Bỏ qua.", payload.getOrderId());
+                return;
+            }
+            String userId = orderRes.getResult().getUserId();
+
+            // Bước 2: Gọi Identity Service để lấy Email khách hàng
+            log.info("[RETRY] Đang lấy thông tin tài khoản từ Identity Service...");
+            var accountRes = accountClient.getAccountById(userId);
+            if (accountRes == null || !accountRes.isSuccess() || accountRes.getResult() == null) {
+                log.error("LỖI DỮ LIỆU: Không tìm thấy tài khoản {} để gửi thông báo. Bỏ qua.", userId);
+                return;
+            }
+            String customerEmail = accountRes.getResult().getEmail();
+            String customerName = accountRes.getResult().getUsername();
+
+            // Bước 3: Gửi email thông báo
+            String subject = "Cập nhật trạng thái vận chuyển đơn hàng #" + payload.getOrderId();
+            String statusDesc = "COMPLETED".equals(payload.getStatus()) ? "GIAO HÀNG THÀNH CÔNG" : "GIAO HÀNG THẤT BẠI";
+            
+            String body = String.format("Chào %s,\n\nĐơn hàng #%s của bạn đã có cập nhật vận chuyển: %s.\n%s", 
+                    customerName, payload.getOrderId(), statusDesc, 
+                    payload.getFailReason() != null ? "Lý do: " + payload.getFailReason() : "");
+
+            emailService.sendEmail(customerEmail, subject, body);
+            log.info("Đã gửi lệnh gửi mail tới {} thành công.", customerEmail);
+            
+        } catch (Exception e) {
+            log.warn("[CASCADING FAILURE] Có lỗi khi gọi service phụ trợ (Order/Identity). Đang kích hoạt cơ chế Retry của RabbitMQ... Lỗi: {}", e.getMessage());
+            // Ném lại lỗi để RabbitMQ thực hiện Retry dựa trên cấu hình trong application.yml
+            throw e;
         }
-        String userId = orderRes.getResult().getUserId();
-
-        // Bước 2: Gọi Identity Service để lấy Email khách hàng
-        var accountRes = accountClient.getAccountById(userId);
-        if (accountRes == null || !accountRes.isSuccess() || accountRes.getResult() == null) {
-            log.error("LỖI DỮ LIỆU: Không tìm thấy tài khoản {} để gửi thông báo. Bỏ qua.", userId);
-            return; // Lỗi logic (404) -> Không retry
-        }
-        String customerEmail = accountRes.getResult().getEmail();
-        String customerName = accountRes.getResult().getUsername();
-
-        // Bước 3: Gửi email thông báo
-        String subject = "Cập nhật trạng thái vận chuyển đơn hàng #" + payload.getOrderId();
-        String statusDesc = "COMPLETED".equals(payload.getStatus()) ? "GIAO HÀNG THÀNH CÔNG" : "GIAO HÀNG THẤT BẠI";
-        
-        String body = String.format("Chào %s,\n\nĐơn hàng #%s của bạn đã có cập nhật vận chuyển: %s.\n%s", 
-                customerName, payload.getOrderId(), statusDesc, 
-                payload.getFailReason() != null ? "Lý do: " + payload.getFailReason() : "");
-
-        emailService.sendEmail(customerEmail, subject, body);
-        log.info("Đã gửi lệnh gửi mail tới {} thành công.", customerEmail);
     }
 }

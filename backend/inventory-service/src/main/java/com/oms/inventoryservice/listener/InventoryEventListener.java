@@ -39,7 +39,7 @@ public class InventoryEventListener {
      * Logic: Khách đã trả tiền. Trừ thẳng vào reservedQuantity
      * Bắt buộc: Idempotency check
      */
-    @RabbitListener(queues = RabbitMQConfig.INVENTORY_CONFIRM_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_INVENTORY_CONFIRM)
     @Transactional
     public void handleConfirmOrder(ConfirmOrderCommand command) {
         log.info("Received CONFIRM command: {}", command);
@@ -109,7 +109,7 @@ public class InventoryEventListener {
      * Logic: Đơn huỷ. Trả lại hàng lên kệ: availableQuantity tăng lại, reservedQuantity giảm
      * Bắt buộc: Idempotency check
      */
-    @RabbitListener(queues = RabbitMQConfig.INVENTORY_ROLLBACK_QUEUE)
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_INVENTORY_ROLLBACK)
     @Transactional
     public void handleRollbackOrder(RollbackOrderCommand command) {
         log.info("Received ROLLBACK command: {}", command);

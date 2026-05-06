@@ -37,9 +37,19 @@ public class Payment {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "payment_gateway", length = 32)
+    private String paymentGateway;
+
+    @Column(name = "retry_count")
+    private Integer retryCount = 0;
+
+    @Column(name = "last_retry_at")
+    private LocalDateTime lastRetryAt;
+
     @PrePersist
     void onCreate() {
         this.createdAt = LocalDateTime.now();
+        this.status = PaymentStatus.PENDING;
     }
 
     public Long getId() {
@@ -80,5 +90,29 @@ public class Payment {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public String getPaymentGateway() {
+        return paymentGateway;
+    }
+
+    public void setPaymentGateway(String paymentGateway) {
+        this.paymentGateway = paymentGateway;
+    }
+
+    public Integer getRetryCount() {
+        return retryCount;
+    }
+
+    public void setRetryCount(Integer retryCount) {
+        this.retryCount = retryCount;
+    }
+
+    public LocalDateTime getLastRetryAt() {
+        return lastRetryAt;
+    }
+
+    public void setLastRetryAt(LocalDateTime lastRetryAt) {
+        this.lastRetryAt = lastRetryAt;
     }
 }

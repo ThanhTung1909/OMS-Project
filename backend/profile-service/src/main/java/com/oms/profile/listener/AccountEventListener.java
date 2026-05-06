@@ -28,7 +28,7 @@ public class AccountEventListener {
     private final ProcessedEventRepository processedEventRepository;
     private final DepartmentRepository departmentRepository;
 
-    @RabbitListener(queues = "account.created.queue")
+    @RabbitListener(queues = com.oms.profile.config.RabbitMQConfig.QUEUE_PROFILE_ACCOUNT_CREATE)
     @Transactional
     public void handleAccountCreated(AccountCreatedEvent event) {
         log.info("Nhận sự kiện tạo tài khoản: {} với vai trò: {}", event.getUserName(), event.getRole());

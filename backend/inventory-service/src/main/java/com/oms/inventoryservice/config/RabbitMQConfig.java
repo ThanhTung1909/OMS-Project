@@ -1,57 +1,62 @@
 package com.oms.inventoryservice.config;
 
+import com.oms.common.constant.RabbitMQConstants;
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Cấu hình RabbitMQ cho Inventory Service
- * Định nghĩa các queue, exchange, và binding cho events
- */
 @Configuration
 public class RabbitMQConfig {
 
-    // Queue names
-    public static final String INVENTORY_CONFIRM_QUEUE = "inventory.command.confirm";
-    public static final String INVENTORY_ROLLBACK_QUEUE = "inventory.command.rollback";
+    @Value("${spring.rabbitmq.host:localhost}")
+    private String host;
 
-    // Exchange name
-    public static final String INVENTORY_EXCHANGE = "inventory.exchange";
+    @Value("${spring.rabbitmq.port:5672}")
+    private int port;
 
-    // Routing keys
-    public static final String CONFIRM_ROUTING_KEY = "inventory.command.confirm";
-    public static final String ROLLBACK_ROUTING_KEY = "inventory.command.rollback";
+    @Value("${spring.rabbitmq.username:guest}")
+    private String username;
 
-    // ===== CONFIRM COMMAND =====
+    @Value("${spring.rabbitmq.password:guest}")
+    private String password;
+
+    public static final String QUEUE_INVENTORY_CONFIRM = "q.inventory.confirm";
+    public static final String QUEUE_INVENTORY_ROLLBACK = "q.inventory.rollback";
+
     @Bean
-    public Queue confirmQueue() {
-        return new Queue(INVENTORY_CONFIRM_QUEUE, true, false, false);
-    }
-
-    // ===== ROLLBACK COMMAND =====
-    @Bean
-    public Queue rollbackQueue() {
-        return new Queue(INVENTORY_ROLLBACK_QUEUE, true, false, false);
-    }
-
-    // ===== EXCHANGE =====
-    @Bean
-    public TopicExchange inventoryExchange() {
-        return new TopicExchange(INVENTORY_EXCHANGE, true, false);
-    }
-
-    // ===== BINDINGS =====
-    @Bean
-    public Binding confirmBinding(Queue confirmQueue, TopicExchange inventoryExchange) {
-        return BindingBuilder.bind(confirmQueue)
-                .to(inventoryExchange)
-                .with(CONFIRM_ROUTING_KEY);
+    public TopicExchange omsExchange() {
+        return new TopicExchange(RabbitMQConstants.EXCHANGE_NAME);
     }
 
     @Bean
-    public Binding rollbackBinding(Queue rollbackQueue, TopicExchange inventoryExchange) {
-        return BindingBuilder.bind(rollbackQueue)
-                .to(inventoryExchange)
-                .with(ROLLBACK_ROUTING_KEY);
+    public Queue inventoryConfirmQueue() {
+        return new Queue(QUEUE_INVENTORY_CONFIRM, true);
+    }
+
+    @Bean
+    public Queue inventoryRollbackQueue() {
+        return new Queue(QUEUE_INVENTORY_ROLLBACK, true);
+    }
+
+    @Bean
+    public Binding bindingInventoryConfirm(Queue inventoryConfirmQueue, TopicExchange omsExchange) {
+        return BindingBuilder.bind(inventoryConfirmQueue)
+                .to(omsExchange)
+                .with(RabbitMQConstants.INVENTORY_COMMAND_CONFIRM);
+    }
+
+    @Bean
+    public Binding bindingInventoryRollback(Queue inventoryRollbackQueue, TopicExchange omsExchange) {
+        return BindingBuilder.bind(inventoryRollbackQueue)
+                .to(omsExchange)
+                .with(RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK);
+    }
+
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
     }
 }

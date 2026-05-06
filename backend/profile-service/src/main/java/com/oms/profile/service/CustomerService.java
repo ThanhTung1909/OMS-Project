@@ -1,8 +1,11 @@
 package com.oms.profile.service;
 
+import com.oms.profile.dto.AddressRequest;
 import com.oms.profile.dto.AddressResponse;
 import com.oms.profile.dto.CustomerProfileResponse;
 import com.oms.profile.entity.Customer;
+import com.oms.profile.entity.CustomerAddress;
+import com.oms.profile.repository.CustomerAddressRepository;
 import com.oms.profile.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,7 @@ import java.util.stream.Collectors;
 public class CustomerService {
 
     private  final CustomerRepository customerRepository;
+    private  final CustomerAddressRepository addressRepository;
 
     @Transactional(readOnly = true)
     public CustomerProfileResponse getProfileByAccountId(String accountId) {
@@ -45,5 +49,68 @@ public class CustomerService {
                 .dateOfBirth(customer.getDateOfBirth() != null ? customer.getDateOfBirth().toString() : null)
                 .addresses(addressDtos)
                 .build();
+    }
+
+    @Transactional
+    public void addAddress(String accountId, AddressRequest request) {
+        Customer customer = customerRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        // Nếu đặt là mặc định, reset các địa chỉ cũ
+        if (request.isDefault()) {
+            addressRepository.findByCustomerIdAndIsDefaultTrue(customer.getId())
+                    .forEach(addr -> {
+                        addr.setDefault(false);
+                        addressRepository.save(addr);
+                    });
+        }
+
+        CustomerAddress address = new CustomerAddress();
+        address.setStreet(request.getStreet());
+        address.setWard(request.getWard());
+        address.setDistrict(request.getDistrict());
+        address.setCity(request.getCity());
+        address.setDefault(request.isDefault());
+        address.setCustomer(customer);
+        address.setActive(true);
+
+        addressRepository.save(address);
+    }
+
+    @Transactional
+    public void setDefaultAddress(String accountId, String addressId) {
+        Customer customer = customerRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        // Reset mặc định cũ
+        addressRepository.findByCustomerIdAndIsDefaultTrue(customer.getId())
+                .forEach(addr -> {
+                    addr.setDefault(false);
+                    addressRepository.save(addr);
+                });
+
+        // Set mặc định mới
+        CustomerAddress address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new RuntimeException("Address not found"));
+        
+        if (!address.getCustomer().getId().equals(customer.getId())) {
+            throw new RuntimeException("Address does not belong to this customer");
+        }
+
+        address.setDefault(true);
+        addressRepository.save(address);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CustomerProfileResponse> getAllCustomers() {
+        return customerRepository.findAll().stream()
+                .map(customer -> CustomerProfileResponse.builder()
+                        .fullname(customer.getFullname())
+                        .phone(customer.getPhone())
+                        .avatarUrl(customer.getAvatarUrl())
+                        .gender(customer.getGender() != null ? customer.getGender().name() : null)
+                        .dateOfBirth(customer.getDateOfBirth() != null ? customer.getDateOfBirth().toString() : null)
+                        .build())
+                .collect(Collectors.toList());
     }
 }

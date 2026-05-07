@@ -16,7 +16,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderRequest {
-    @NotBlank(message = "Mã người dùng không được để trống")
     private String userId;
 
     @NotEmpty(message = "Đơn hàng phải có ít nhất một sản phẩm")

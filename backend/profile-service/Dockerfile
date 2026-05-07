@@ -30,4 +30,4 @@ WORKDIR /app
 # Lưu ý sửa đường dẫn copy đúng theo tên service
 COPY --from=build /app/profile-service/target/*.jar app.jar
 
-ENTRYPOINT ["java", "-Dloader.path=/app/target/classes,/common-library/target/classes", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

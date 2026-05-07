@@ -28,7 +28,7 @@ public class Payment {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 16)
+    @Column(nullable = false, columnDefinition = "VARCHAR(32)")
     private PaymentStatus status;
 
     @Column(nullable = false, unique = true, length = 64)
@@ -37,7 +37,7 @@ public class Payment {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "payment_gateway", length = 32)
+    @Column(name = "payment_gateway", columnDefinition = "VARCHAR(64)")
     private String paymentGateway;
 
     @Column(name = "retry_count")

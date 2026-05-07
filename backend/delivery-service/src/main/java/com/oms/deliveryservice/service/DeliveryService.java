@@ -48,6 +48,12 @@ public class DeliveryService {
         Optional<Delivery> optionalDelivery = deliveryRepository.findById(id);
         if (optionalDelivery.isPresent()) {
             Delivery delivery = optionalDelivery.get();
+            DeliveryStatus currentStatus = delivery.getStatus();
+
+            if (currentStatus == status) {
+                return Optional.of(delivery);
+            }
+
             delivery.setStatus(status);
             
             if (status == DeliveryStatus.RETURNED && failReason != null) {
@@ -56,19 +62,22 @@ public class DeliveryService {
             
             Delivery updatedDelivery = deliveryRepository.save(delivery);
             
-            // Saga Logic: Nếu trạng thái là DELIVERED hoặc RETURNED, gửi sự kiện báo cho SAGA
-            if (status == DeliveryStatus.DELIVERED || status == DeliveryStatus.RETURNED) {
-                String sagaStatus = status == DeliveryStatus.DELIVERED ? "COMPLETED" : "FAILED";
-                com.oms.deliveryservice.dto.DeliveryUpdatePayload event = com.oms.deliveryservice.dto.DeliveryUpdatePayload.builder()
-                        .orderId(delivery.getOrderId())
-                        .deliveryId(delivery.getId())
-                        .status(sagaStatus)
-                        .failReason(delivery.getFailReason())
-                        .build();
-                
-                log.info("Delivery {} for order {} is {}. Sending {} event to SAGA.", id, delivery.getOrderId(), status, sagaStatus);
-                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_STATUS_UPDATE, event);
-            }
+            com.oms.deliveryservice.dto.DeliveryUpdatePayload event = com.oms.deliveryservice.dto.DeliveryUpdatePayload.builder()
+                    .orderId(updatedDelivery.getOrderId())
+                    .deliveryId(updatedDelivery.getId())
+                    .status(updatedDelivery.getStatus().name())
+                    .failReason(updatedDelivery.getFailReason())
+                    .trackingNumber(updatedDelivery.getTrackingNumber())
+                    .shipperName(updatedDelivery.getShipperName())
+                    .shipperPhone(updatedDelivery.getShipperPhone())
+                    .build();
+
+            log.info("Delivery {} for order {} changed from {} to {}. Sending status update event.",
+                    id, updatedDelivery.getOrderId(), currentStatus, status);
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConstants.EXCHANGE_NAME,
+                    RabbitMQConstants.RK_DELIVERY_STATUS_UPDATE,
+                    event);
             
             return Optional.of(updatedDelivery);
         }

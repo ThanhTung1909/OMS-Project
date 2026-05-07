@@ -48,3 +48,12 @@ logging:
   level:
     com.oms.notificationservice: INFO
     org.springframework.amqp: INFO
+
+app:
+  services:
+    order-service:
+      url: http://order-service:8083
+    profile-service:
+      url: http://profile-service:8088
+    identity-service:
+      url: http://identity-service:8080

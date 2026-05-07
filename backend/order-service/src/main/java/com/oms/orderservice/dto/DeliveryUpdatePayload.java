@@ -14,4 +14,7 @@ public class DeliveryUpdatePayload {
     private String deliveryId;
     private String status;
     private String failReason;
+    private String trackingNumber;
+    private String shipperName;
+    private String shipperPhone;
 }

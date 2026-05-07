@@ -8,6 +8,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CustomerProfileResponse {
+    private String id;
     private String fullname;
     private String phone;
     private String avatarUrl;

@@ -3,8 +3,10 @@ package com.oms.profile.service;
 import com.oms.profile.dto.AddressRequest;
 import com.oms.profile.dto.AddressResponse;
 import com.oms.profile.dto.CustomerProfileResponse;
+import com.oms.profile.dto.UpdateProfileRequest;
 import com.oms.profile.entity.Customer;
 import com.oms.profile.entity.CustomerAddress;
+import com.oms.profile.entity.Gender;
 import com.oms.profile.repository.CustomerAddressRepository;
 import com.oms.profile.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +50,7 @@ public class CustomerService {
                 .collect(Collectors.toList());
 
         return CustomerProfileResponse.builder()
+                .id(customer.getId())
                 .fullname(customer.getFullname())
                 .phone(customer.getPhone())
                 .avatarUrl(customer.getAvatarUrl())
@@ -119,5 +122,24 @@ public class CustomerService {
                         .dateOfBirth(customer.getDateOfBirth() != null ? customer.getDateOfBirth().toString() : null)
                         .build())
                 .collect(Collectors.toList());
+    }
+    @Transactional
+    public CustomerProfileResponse updateProfile(String accountId, UpdateProfileRequest request) {
+        Customer customer = customerRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        if (request.getFullname() != null) customer.setFullname(request.getFullname());
+        if (request.getPhone() != null) customer.setPhone(request.getPhone());
+        if (request.getAvatarUrl() != null) customer.setAvatarUrl(request.getAvatarUrl());
+        if (request.getDateOfBirth() != null) customer.setDateOfBirth(request.getDateOfBirth());
+        if (request.getGender() != null) {
+            try {
+                customer.setGender(Gender.valueOf(request.getGender().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                // Ignore invalid gender
+            }
+        }
+
+        return mapToResponse(customerRepository.save(customer));
     }
 }

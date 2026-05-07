@@ -23,14 +23,19 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<OrderResponse>> createOrder(@Valid @RequestBody OrderRequest request) {
-        log.info("Nhận yêu cầu tạo đơn hàng cho User: {}", request.getUserId());
+    public ResponseEntity<ApiResponse<OrderResponse>> createOrder(
+            @RequestHeader("X-Account-Id") String accountId,
+            @Valid @RequestBody OrderRequest request) {
+        
+        // Gán accountId vào request để đảm bảo đơn hàng thuộc về đúng người đang đăng nhập
+        request.setUserId(accountId);
+        log.info("Nhận yêu cầu tạo đơn hàng cho Account: {}", accountId);
 
         String orderId = orderService.createOrder(request);
 
         OrderResponse result = OrderResponse.builder()
                 .orderId(orderId)
-                .userId(request.getUserId())
+                .userId(accountId)
                 .status("PAYMENT_PENDING")
                 .message("Đơn hàng đã được khởi tạo thành công. Vui lòng tiến hành thanh toán.")
                 .build();
@@ -72,13 +77,13 @@ public class OrderController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<Page<OrderResponse>>> getMyOrders(
-            @RequestHeader("X-Account-Id") String userId,
+            @RequestHeader("X-Account-Id") String accountId,
             org.springframework.data.domain.Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.<Page<OrderResponse>>builder()
                 .success(true)
                 .status(HttpStatus.OK.value())
                 .message("Thành công")
-                .result(orderService.getMyOrders(userId, pageable))
+                .result(orderService.getMyOrders(accountId, pageable))
                 .build());
     }
 
@@ -94,8 +99,8 @@ public class OrderController {
     }
 
     @PutMapping("/{id}/cancel")
-    public ResponseEntity<ApiResponse<Void>> cancelOrder(@PathVariable String id, @RequestHeader("X-Account-Id") String userId) {
-        orderService.cancelOrder(id, userId);
+    public ResponseEntity<ApiResponse<Void>> cancelOrder(@PathVariable String id, @RequestHeader("X-Account-Id") String accountId) {
+        orderService.cancelOrder(id, accountId);
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .success(true)
                 .status(HttpStatus.OK.value())

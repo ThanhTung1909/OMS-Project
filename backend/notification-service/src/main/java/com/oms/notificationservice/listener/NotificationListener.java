@@ -1,5 +1,6 @@
 package com.oms.notificationservice.listener;
 
+import com.oms.common.ApiResponse;
 import com.oms.notificationservice.config.RabbitMQConfig;
 import com.oms.notificationservice.client.AccountClient;
 import com.oms.notificationservice.client.OrderClient;
@@ -64,26 +65,26 @@ public class NotificationListener {
         log.info("Nhận sự kiện vận chuyển cho đơn hàng: {}", payload.getOrderId());
 
         try {
-            // Bước 1: Gọi Order Service để lấy profileId (userId lưu trong đơn hàng)
-            log.info("[RETRY] Đang lấy thông tin đơn hàng từ Order Service...");
+            // Bước 1: Gọi Order Service để lấy accountId (được lưu trong trường userId của đơn hàng)
+            log.info("[SYNC] Đang lấy thông tin đơn hàng từ Order Service...");
             var orderRes = orderClient.getOrderById(payload.getOrderId());
             if (orderRes == null || !orderRes.isSuccess() || orderRes.getResult() == null) {
                 log.error("LỖI DỮ LIỆU: Không tìm thấy đơn hàng {} để gửi thông báo. Bỏ qua.", payload.getOrderId());
                 return;
             }
-            String profileId = orderRes.getResult().getUserId();
+            String accountId = orderRes.getResult().getUserId();
 
-            // Bước 2: Gọi Profile Service để lấy accountId
-            log.info("[RETRY] Đang lấy thông tin hồ sơ từ Profile Service cho profileId: {}...", profileId);
-            var profile = profileClient.getCustomerById(profileId);
-            if (profile == null || profile.getAccountId() == null) {
-                log.error("LỖI DỮ LIỆU: Không tìm thấy hồ sơ hoặc accountId cho profileId: {}. Bỏ qua.", profileId);
+            // Bước 2: Gọi Profile Service để lấy thông tin khách hàng (tên,...) bằng accountId
+            log.info("[SYNC] Đang lấy thông tin hồ sơ từ Profile Service cho accountId: {}...", accountId);
+            var profileRes = profileClient.getProfileByAccountId(accountId);
+            if (profileRes == null || !profileRes.isSuccess() || profileRes.getResult() == null) {
+                log.error("LỖI DỮ LIỆU: Không tìm thấy hồ sơ cho accountId: {}. Bỏ qua.", accountId);
                 return;
             }
-            String accountId = profile.getAccountId();
+            var profile = profileRes.getResult();
 
             // Bước 3: Gọi Identity Service để lấy Email khách hàng bằng accountId
-            log.info("[RETRY] Đang lấy thông tin tài khoản từ Identity Service cho accountId: {}...", accountId);
+            log.info("[SYNC] Đang lấy thông tin tài khoản từ Identity Service cho accountId: {}...", accountId);
             var accountRes = accountClient.getAccountById(accountId);
             if (accountRes == null || !accountRes.isSuccess() || accountRes.getResult() == null) {
                 log.error("LỖI DỮ LIỆU: Không tìm thấy tài khoản {} để gửi thông báo. Bỏ qua.", accountId);

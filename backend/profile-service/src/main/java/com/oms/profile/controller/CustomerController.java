@@ -6,9 +6,11 @@ import com.oms.profile.dto.CustomerProfileResponse;
 import com.oms.profile.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/customers")
@@ -35,5 +37,8 @@ public class CustomerController {
     @GetMapping
     public ResponseEntity<List<CustomerProfileResponse>> getAllCustomers() {
         return ResponseEntity.ok(customerService.getAllCustomers());
+    @GetMapping("/{id}")
+    public ResponseEntity<CustomerProfileResponse> getCustomerById(@PathVariable String id) {
+        return ResponseEntity.ok(customerService.getProfileById(id));
     }
 }

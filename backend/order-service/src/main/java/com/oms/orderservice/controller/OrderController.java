@@ -30,6 +30,7 @@ public class OrderController {
 
         OrderResponse result = OrderResponse.builder()
                 .orderId(orderId)
+                .userId(request.getUserId())
                 .status("PAYMENT_PENDING")
                 .message("Đơn hàng đã được khởi tạo thành công. Vui lòng tiến hành thanh toán.")
                 .build();

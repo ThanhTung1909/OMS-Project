@@ -16,14 +16,14 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderRequest {
-    @NotBlank(message = "User ID is required")
+    @NotBlank(message = "Mã người dùng không được để trống")
     private String userId;
 
-    @NotEmpty(message = "Order must have at least one item")
+    @NotEmpty(message = "Đơn hàng phải có ít nhất một sản phẩm")
     @Valid
     private List<OrderItemRequest> orderItems;
 
-    @NotNull(message = "Shipping address is required")
+    @NotNull(message = "Thông tin địa chỉ giao hàng là bắt buộc")
     @Valid
     private AddressRequest address;
 }

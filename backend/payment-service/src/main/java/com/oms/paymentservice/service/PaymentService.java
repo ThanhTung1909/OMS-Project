@@ -18,6 +18,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.util.ClassUtils;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -94,7 +96,7 @@ public class PaymentService {
         
         // Choose payment gateway (alternating between VNPay and Momo)
         PaymentGateway gateway = choosePaymentGateway();
-        payment.setPaymentGateway(gateway.getClass().getSimpleName());
+        payment.setPaymentGateway(ClassUtils.getUserClass(gateway).getSimpleName());
         
         paymentRepository.save(payment);
 

@@ -4,7 +4,7 @@ spring:
     application:
         name: inventory-service
     datasource:
-        url: jdbc:mariadb://localhost:3306/db_inventory
+        url: jdbc:mariadb://${SPRING_DATASOURCE_HOST:mariadb}:3306/db_inventory
         username: root
         password: root
         driver-class-name: org.mariadb.jdbc.Driver
@@ -13,10 +13,10 @@ spring:
             ddl-auto: update
         show-sql: true
     rabbitmq:
-        host: localhost
-        port: 5672
-        username: user
-        password: password
+        host: ${SPRING_RABBITMQ_HOST:rabbitmq}
+        port: ${SPRING_RABBITMQ_PORT:5672}
+        username: ${SPRING_RABBITMQ_USERNAME:user}
+        password: ${SPRING_RABBITMQ_PASSWORD:password}
         listener:
             simple:
                 acknowledge-mode: manual
@@ -25,7 +25,7 @@ spring:
 eureka:
     client:
         service-url:
-            defaultZone: http://localhost:8761/eureka/
+            defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://discovery-server:8761/eureka/}
 
 logging:
     level:

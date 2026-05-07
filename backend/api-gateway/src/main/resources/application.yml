@@ -5,7 +5,7 @@ spring:
     name: api-gateway
   data:
     redis:
-      host: localhost
+      host: redis
       port: 6379
   cloud:
     gateway:
@@ -16,8 +16,9 @@ spring:
         corsConfigurations:
           "[/**]":
             allowedOrigins:
-              - "http://localhost:3000"
-              - "http://127.0.0.1:3000"
+            - "http://localhost:3000"
+            - "http://127.0.0.1:3000"
+            - "http://192.168.10.121:3000"
             allowedMethods:
               - GET
               - POST
@@ -90,3 +91,28 @@ eureka:
 jwt:
   secret: "oms-super-secret-key-project-kien-truc-phan-mem-2026-xyz123"
   expiration: 86400000
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+    instances:
+      orderCircuitBreaker:
+        baseConfig: default
+      inventoryCircuitBreaker:
+        baseConfig: default
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 10s
+    instances:
+      orderCircuitBreaker:
+        baseConfig: default
+      inventoryCircuitBreaker:
+        baseConfig: default

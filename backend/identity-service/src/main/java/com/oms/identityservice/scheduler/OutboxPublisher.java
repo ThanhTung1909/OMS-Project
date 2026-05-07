@@ -6,6 +6,8 @@ import com.oms.identityservice.entity.OutboxEvent;
 import com.oms.identityservice.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message; 
+import org.springframework.amqp.core.MessageProperties; 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -21,7 +23,7 @@ public class OutboxPublisher {
     private final OutboxEventRepository outboxEventRepository;
     private final RabbitTemplate rabbitTemplate;
     
-    // Đảm bảo không quét chồng chéo khi có nhiều pod/instance (Ở đây mô phỏng bằng cờ boolean)
+    // Đảm bảo không quét chồng chéo khi có nhiều pod/instance
     private boolean isPublishing = false;
 
     @Scheduled(fixedRate = 5000)
@@ -37,8 +39,17 @@ public class OutboxPublisher {
             
             for (OutboxEvent event : pendingEvents) {
                 try {
-                    // Bắn tin nhắn lên RabbitMQ bằng Exchange và Routing Key chuẩn
-                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, event.getType(), event.getPayload());
+                   
+                    
+                    // 1. Tạo thuộc tính báo cho RabbitMQ biết đây là định dạng JSON
+                    MessageProperties properties = new MessageProperties();
+                    properties.setContentType(MessageProperties.CONTENT_TYPE_JSON);
+                    
+                    // 2. Gói chuỗi JSON String vào một Object Message chuẩn
+                    Message message = new Message(event.getPayload().getBytes(), properties);
+                    
+                    // 3. Sử dụng hàm send()
+                    rabbitTemplate.send(RabbitMQConstants.EXCHANGE_NAME, event.getType(), message);
                     
                     // Cập nhật trạng thái thành công
                     event.setStatus(OutboxStatus.PROCESSED);

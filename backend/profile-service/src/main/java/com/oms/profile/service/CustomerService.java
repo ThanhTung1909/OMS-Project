@@ -23,12 +23,19 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public CustomerProfileResponse getProfileByAccountId(String accountId) {
-
-        // 1. Tìm Customer từ DB
         Customer customer = customerRepository.findByAccountId(accountId)
                 .orElseThrow(() -> new RuntimeException("Customer not found for accountId: " + accountId));
+        return mapToResponse(customer);
+    }
 
-        // 2. Map danh sách Address Entity sang AddressResponse DTO
+    @Transactional(readOnly = true)
+    public CustomerProfileResponse getProfileById(String id) {
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Customer not found with id: " + id));
+        return mapToResponse(customer);
+    }
+
+    private CustomerProfileResponse mapToResponse(Customer customer) {
         List<AddressResponse> addressDtos = customer.getCustomerAddresses().stream()
                 .filter(addr -> addr.isActive())
                 .map(addr -> AddressResponse.builder()
@@ -40,7 +47,6 @@ public class CustomerService {
                         .build())
                 .collect(Collectors.toList());
 
-        // 3. Map Customer Entity sang CustomerProfileResponse DTO
         return CustomerProfileResponse.builder()
                 .fullname(customer.getFullname())
                 .phone(customer.getPhone())
@@ -48,6 +54,7 @@ public class CustomerService {
                 .gender(customer.getGender() != null ? customer.getGender().name() : null)
                 .dateOfBirth(customer.getDateOfBirth() != null ? customer.getDateOfBirth().toString() : null)
                 .addresses(addressDtos)
+                .accountId(customer.getAccountId())
                 .build();
     }
 

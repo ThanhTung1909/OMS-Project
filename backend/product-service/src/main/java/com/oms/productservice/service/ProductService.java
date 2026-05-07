@@ -101,7 +101,7 @@ public class ProductService {
                 .description(product.getDescription())
                 .price(product.getPrice())
                 .sku(product.getSku())
-                .imageUrl(product.getImageUrl())
+                .imageUrl(product.getImageUrl() != null ? new java.util.ArrayList<>(product.getImageUrl()) : null)
                 .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())

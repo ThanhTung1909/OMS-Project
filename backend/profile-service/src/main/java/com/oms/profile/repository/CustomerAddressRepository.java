@@ -7,4 +7,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CustomerAddressRepository extends JpaRepository<CustomerAddress, String> {
+    java.util.List<CustomerAddress> findByCustomerIdAndIsDefaultTrue(String customerId);
 }

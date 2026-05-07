@@ -18,7 +18,7 @@ public class RegisterRequest {
 
     @NotBlank(message = "Mật khẩu không được để trống")
     @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
-    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).+$", message = "Mật khẩu phải bao gồm cả ký tự chữ và ký tự số")
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).+$", message = "Mật khẩu phải bao gồm cả ký tự chữ và ký tự số và có ít một ký tự hoa")
     private String password;
 
     @NotBlank(message = "Vui lòng nhập lại mật khẩu")

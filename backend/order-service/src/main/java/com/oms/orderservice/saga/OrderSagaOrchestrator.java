@@ -29,38 +29,62 @@ public class OrderSagaOrchestrator {
     public void handlePaymentResult(PaymentResultPayload payload) {
         if (payload == null || payload.getOrderId() == null) return;
 
-        Order order = orderRepository.findById(payload.getOrderId())
-                .orElseThrow(() -> new RuntimeException("Order not found: " + payload.getOrderId()));
+        log.info("🔔 [SAGA] Received payment result for Order: {}, Status: {}", payload.getOrderId(), payload.getPaymentStatus());
+
+        // Cơ chế retry tìm Order (đề phòng race condition khi DB chưa kịp commit xong transaction tạo đơn)
+        Order order = null;
+        int retryCount = 0;
+        while (retryCount < 3) {
+            var orderOpt = orderRepository.findById(payload.getOrderId());
+            if (orderOpt.isPresent()) {
+                order = orderOpt.get();
+                break;
+            }
+            try {
+                log.warn("⚠️ [SAGA] Order {} not found in DB. Retrying... ({}/3)", payload.getOrderId(), retryCount + 1);
+                Thread.sleep(1000); 
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            retryCount++;
+        }
+
+        if (order == null) {
+            log.error("❌ [SAGA] CRITICAL: Order not found after retries: {}. Dropping message to avoid infinite loop.", payload.getOrderId());
+            return; // Kết thúc xử lý, không ném Exception để tránh Spring AMQP re-queue tin nhắn lỗi này.
+        }
+
+        final Order finalOrder = order;
 
         // Idempotency check
-        if (order.getStatus() != OrderStatus.PAYMENT_PENDING) {
+        if (finalOrder.getStatus() != OrderStatus.PAYMENT_PENDING) {
             log.info("[SAGA] Order {} already processed (Status: {}). Skipping.", 
-                     order.getId(), order.getStatus());
+                     finalOrder.getId(), finalOrder.getStatus());
             return;
         }
 
-        if ("COMPLETED".equalsIgnoreCase(payload.getStatus())) {
-            log.info("[SAGA] Payment COMPLETED for order {}. Initiating inventory CONFIRM.", order.getId());
-            order.setStatus(OrderStatus.CONFIRMED);
-            order.setPaymentId(payload.getTransactionId());
+        if ("COMPLETED".equalsIgnoreCase(payload.getPaymentStatus())) {
+            log.info("[SAGA] Payment COMPLETED for order {}. Initiating inventory CONFIRM.", finalOrder.getId());
+            finalOrder.setStatus(OrderStatus.CONFIRMED);
+            finalOrder.setPaymentId(payload.getTransactionId());
             
-            order.getOrderItems().forEach(item -> {
-                InventoryCommand confirmCmd = new InventoryCommand(order.getId(), item.getProductId(), item.getQuantity(), "CONFIRM");
+            finalOrder.getOrderItems().forEach(item -> {
+                InventoryCommand confirmCmd = new InventoryCommand(finalOrder.getId(), item.getProductId(), item.getQuantity(), "CONFIRM");
                 rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_CONFIRM, confirmCmd);
             });
             
         } else {
-            log.info("[SAGA] Payment FAILED for order {}. Initiating inventory ROLLBACK.", order.getId());
-            order.setStatus(OrderStatus.CANCELLED);
+            log.info("[SAGA] Payment FAILED for order {}. Initiating inventory ROLLBACK.", finalOrder.getId());
+            finalOrder.setStatus(OrderStatus.CANCELLED);
             
-            order.getOrderItems().forEach(item -> {
-                InventoryCommand rollbackCmd = new InventoryCommand(order.getId(), item.getProductId(), item.getQuantity(), "ROLLBACK");
+            finalOrder.getOrderItems().forEach(item -> {
+                InventoryCommand rollbackCmd = new InventoryCommand(finalOrder.getId(), item.getProductId(), item.getQuantity(), "ROLLBACK");
                 rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK, rollbackCmd);
             });
         }
         
-        order.setUpdatedAt(LocalDateTime.now());
-        orderRepository.save(order);
+        finalOrder.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(finalOrder);
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_DELIVERY_STATUS)

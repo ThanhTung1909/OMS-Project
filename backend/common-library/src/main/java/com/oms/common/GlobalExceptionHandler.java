@@ -18,7 +18,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleAppException(AppException ex) {
         ErrorCode errorCode = ex.getErrorCode();
         return ResponseEntity.status(errorCode.getHttpStatus().value()).body(
-            ApiResponse.builder()
+            ApiResponse.<Object>builder()
                 .success(false)
                 .status(errorCode.getHttpStatus().value())
                 .message(errorCode.getMessage())
@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.toList());
 
         return ResponseEntity.badRequest().body(
-            ApiResponse.builder()
+            ApiResponse.<List<ApiError>>builder()
                 .success(false)
                 .status(HttpStatus.BAD_REQUEST.value())
                 .message("Lỗi xác thực dữ liệu")
@@ -46,7 +46,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleGeneralException(Exception ex) {
         log.error("ANTIGRAVITY CRITICAL ERROR: ", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-            ApiResponse.builder()
+            ApiResponse.<Object>builder()
                 .success(false)
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .message("Lỗi hệ thống nghiêm trọng")

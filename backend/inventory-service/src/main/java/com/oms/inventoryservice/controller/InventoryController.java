@@ -69,4 +69,20 @@ public class InventoryController {
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("Inventory Service is running");
     }
+
+    /**
+     * Giữ kho hàng loạt (dùng cho tạo đơn hàng)
+     */
+    @PostMapping("/reserve-bulk")
+    public ResponseEntity<ApiResponse<Void>> reserveBulk(@RequestBody java.util.List<com.oms.inventoryservice.dto.InventoryReserveRequest> requests) {
+        log.info("Received bulk reservation request for {} items", requests.size());
+        inventoryService.reserveBulk(requests);
+        return ResponseEntity.ok(
+            ApiResponse.<Void>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Giữ kho thành công")
+                .build()
+        );
+    }
 }

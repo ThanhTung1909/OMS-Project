@@ -16,15 +16,13 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderItemRequest {
-    @NotBlank(message = "Product ID is required")
+    @NotBlank(message = "Mã sản phẩm không được để trống")
     private String productId;
 
     private String productName;
 
-    @NotNull(message = "Price is required")
-    @Positive(message = "Price must be positive")
     private BigDecimal price;
 
-    @Min(value = 1, message = "Quantity must be at least 1")
+    @Min(value = 1, message = "Số lượng sản phẩm phải ít nhất là 1")
     private int quantity;
 }

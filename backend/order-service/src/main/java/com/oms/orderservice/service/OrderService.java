@@ -7,6 +7,7 @@ import com.oms.common.constant.RabbitMQConstants;
 import com.oms.common.enums.OrderStatus;
 import com.oms.orderservice.client.InventoryClient;
 import com.oms.orderservice.client.ProductClient;
+import com.oms.orderservice.dto.AddressRequest;
 import com.oms.orderservice.dto.InventoryCommand;
 import com.oms.orderservice.dto.InventoryReserveRequest;
 import com.oms.orderservice.dto.OrderItemRequest;
@@ -31,7 +32,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.UUID;
+
 
 @Service
 @RequiredArgsConstructor
@@ -54,7 +56,9 @@ public class OrderService {
 
     @Transactional
     public String createOrder(OrderRequest request) {
-        String orderId = java.util.UUID.randomUUID().toString();
+        String orderId = UUID.randomUUID().toString();
+        log.info("Bắt đầu tạo đơn hàng {}. Thông tin người nhận từ request: Name={}, Phone={}", 
+                orderId, request.getAddress().getReceiverName(), request.getAddress().getReceiverPhone());
 
         BigDecimal totalPrice = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
@@ -85,8 +89,14 @@ public class OrderService {
             reserveRequests.add(reserveReq);
         }
 
+        AddressRequest addrReq = request.getAddress();
         OrderAddress shippingAddress = new OrderAddress();
-        BeanUtils.copyProperties(request.getAddress(), shippingAddress);
+        shippingAddress.setStreet(addrReq.getStreet());
+        shippingAddress.setWard(addrReq.getWard());
+        shippingAddress.setDistrict(addrReq.getDistrict());
+        shippingAddress.setCity(addrReq.getCity());
+        shippingAddress.setReceiverName(addrReq.getReceiverName());
+        shippingAddress.setReceiverPhone(addrReq.getReceiverPhone());
 
         Order order = Order.builder()
                 .id(orderId)
@@ -171,6 +181,8 @@ public class OrderService {
                     addr.getStreet(), addr.getWard(), addr.getDistrict(), addr.getCity())
                     .filter(s -> s != null && !s.isEmpty())
                     .collect(java.util.stream.Collectors.joining(", "));
+            log.info("[SAGA] Chuẩn bị gửi lệnh tạo vận đơn. Người nhận: {}, SĐT: {}, Địa chỉ: {}", 
+                    addr.getReceiverName(), addr.getReceiverPhone(), fullAddress);
 
             com.oms.orderservice.dto.DeliveryRequest deliveryRequest = com.oms.orderservice.dto.DeliveryRequest.builder()
                     .orderId(orderId)

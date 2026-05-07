@@ -19,7 +19,6 @@ import com.oms.common.enums.OrderStatus;
 public class Order {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     private String userId;
     

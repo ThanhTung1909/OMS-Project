@@ -3,6 +3,7 @@ package com.oms.notificationservice.listener;
 import com.oms.notificationservice.config.RabbitMQConfig;
 import com.oms.notificationservice.client.AccountClient;
 import com.oms.notificationservice.client.OrderClient;
+import com.oms.notificationservice.client.ProfileClient;
 import com.oms.notificationservice.dto.AccountCreatedEvent;
 import com.oms.notificationservice.dto.DeliveryUpdatePayload;
 import com.oms.notificationservice.dto.NotificationEvent;
@@ -23,6 +24,7 @@ public class NotificationListener {
     private final EmailService emailService;
     private final OrderClient orderClient;
     private final AccountClient accountClient;
+    private final ProfileClient profileClient;
 
     /**
      * Lắng nghe sự kiện tạo tài khoản thành công
@@ -61,32 +63,50 @@ public class NotificationListener {
     public void handleDeliveryStatusUpdate(DeliveryUpdatePayload payload) {
         log.info("Nhận sự kiện vận chuyển cho đơn hàng: {}", payload.getOrderId());
 
-        // Bước 1: Gọi Order Service để lấy userId
-        var orderRes = orderClient.getOrderById(payload.getOrderId());
-        if (orderRes == null || !orderRes.isSuccess() || orderRes.getResult() == null) {
-            log.error("LỖI DỮ LIỆU: Không tìm thấy đơn hàng {} để gửi thông báo. Bỏ qua để tránh treo Queue.", payload.getOrderId());
-            return; // Lỗi logic (404) -> Không retry vì dữ liệu không hợp lệ
+        try {
+            // Bước 1: Gọi Order Service để lấy profileId (userId lưu trong đơn hàng)
+            log.info("[RETRY] Đang lấy thông tin đơn hàng từ Order Service...");
+            var orderRes = orderClient.getOrderById(payload.getOrderId());
+            if (orderRes == null || !orderRes.isSuccess() || orderRes.getResult() == null) {
+                log.error("LỖI DỮ LIỆU: Không tìm thấy đơn hàng {} để gửi thông báo. Bỏ qua.", payload.getOrderId());
+                return;
+            }
+            String profileId = orderRes.getResult().getUserId();
+
+            // Bước 2: Gọi Profile Service để lấy accountId
+            log.info("[RETRY] Đang lấy thông tin hồ sơ từ Profile Service cho profileId: {}...", profileId);
+            var profile = profileClient.getCustomerById(profileId);
+            if (profile == null || profile.getAccountId() == null) {
+                log.error("LỖI DỮ LIỆU: Không tìm thấy hồ sơ hoặc accountId cho profileId: {}. Bỏ qua.", profileId);
+                return;
+            }
+            String accountId = profile.getAccountId();
+
+            // Bước 3: Gọi Identity Service để lấy Email khách hàng bằng accountId
+            log.info("[RETRY] Đang lấy thông tin tài khoản từ Identity Service cho accountId: {}...", accountId);
+            var accountRes = accountClient.getAccountById(accountId);
+            if (accountRes == null || !accountRes.isSuccess() || accountRes.getResult() == null) {
+                log.error("LỖI DỮ LIỆU: Không tìm thấy tài khoản {} để gửi thông báo. Bỏ qua.", accountId);
+                return;
+            }
+            String customerEmail = accountRes.getResult().getEmail();
+            String customerName = profile.getFullname(); // Lấy tên từ Profile cho chính xác
+
+            // Bước 4: Gửi email thông báo
+            String subject = "Cập nhật trạng thái vận chuyển đơn hàng #" + payload.getOrderId();
+            String statusDesc = "COMPLETED".equals(payload.getStatus()) ? "GIAO HÀNG THÀNH CÔNG" : "GIAO HÀNG THẤT BẠI";
+            
+            String body = String.format("Chào %s,\n\nĐơn hàng #%s của bạn đã có cập nhật vận chuyển: %s.\n%s", 
+                    customerName, payload.getOrderId(), statusDesc, 
+                    payload.getFailReason() != null ? "Lý do: " + payload.getFailReason() : "");
+
+            emailService.sendEmail(customerEmail, subject, body);
+            log.info("Đã gửi lệnh gửi mail tới {} thành công.", customerEmail);
+            
+        } catch (Exception e) {
+            log.warn("[CASCADING FAILURE] Có lỗi khi gọi service phụ trợ (Order/Identity). Đang kích hoạt cơ chế Retry của RabbitMQ... Lỗi: {}", e.getMessage());
+            // Ném lại lỗi để RabbitMQ thực hiện Retry dựa trên cấu hình trong application.yml
+            throw e;
         }
-        String userId = orderRes.getResult().getUserId();
-
-        // Bước 2: Gọi Identity Service để lấy Email khách hàng
-        var accountRes = accountClient.getAccountById(userId);
-        if (accountRes == null || !accountRes.isSuccess() || accountRes.getResult() == null) {
-            log.error("LỖI DỮ LIỆU: Không tìm thấy tài khoản {} để gửi thông báo. Bỏ qua.", userId);
-            return; // Lỗi logic (404) -> Không retry
-        }
-        String customerEmail = accountRes.getResult().getEmail();
-        String customerName = accountRes.getResult().getUsername();
-
-        // Bước 3: Gửi email thông báo
-        String subject = "Cập nhật trạng thái vận chuyển đơn hàng #" + payload.getOrderId();
-        String statusDesc = "COMPLETED".equals(payload.getStatus()) ? "GIAO HÀNG THÀNH CÔNG" : "GIAO HÀNG THẤT BẠI";
-        
-        String body = String.format("Chào %s,\n\nĐơn hàng #%s của bạn đã có cập nhật vận chuyển: %s.\n%s", 
-                customerName, payload.getOrderId(), statusDesc, 
-                payload.getFailReason() != null ? "Lý do: " + payload.getFailReason() : "");
-
-        emailService.sendEmail(customerEmail, subject, body);
-        log.info("Đã gửi lệnh gửi mail tới {} thành công.", customerEmail);
     }
 }

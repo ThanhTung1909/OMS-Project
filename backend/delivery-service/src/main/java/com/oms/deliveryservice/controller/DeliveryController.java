@@ -47,4 +47,25 @@ public class DeliveryController {
             );
         }
     }
+
+    @GetMapping("/order/{orderId}")
+    public ResponseEntity<ApiResponse<Delivery>> getByOrderId(@PathVariable String orderId) {
+        Optional<Delivery> delivery = deliveryService.getByOrderId(orderId);
+        if (delivery.isPresent()) {
+            return ResponseEntity.ok(ApiResponse.<Delivery>builder()
+                    .success(true)
+                    .status(HttpStatus.OK.value())
+                    .message("Thành công")
+                    .result(delivery.get())
+                    .build());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ApiResponse.<Delivery>builder()
+                            .success(false)
+                            .status(HttpStatus.NOT_FOUND.value())
+                            .message("Không tìm thấy đơn vận chuyển cho đơn hàng này")
+                            .build()
+            );
+        }
+    }
 }

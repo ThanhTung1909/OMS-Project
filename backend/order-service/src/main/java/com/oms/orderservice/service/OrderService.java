@@ -7,14 +7,7 @@ import com.oms.common.constant.RabbitMQConstants;
 import com.oms.common.enums.OrderStatus;
 import com.oms.orderservice.client.InventoryClient;
 import com.oms.orderservice.client.ProductClient;
-import com.oms.orderservice.dto.AddressRequest;
-import com.oms.orderservice.dto.InventoryCommand;
-import com.oms.orderservice.dto.InventoryReserveRequest;
-import com.oms.orderservice.dto.OrderItemRequest;
-import com.oms.orderservice.dto.OrderRequest;
-import com.oms.orderservice.dto.OrderResponse;
-import com.oms.orderservice.dto.PaymentCommand;
-import com.oms.orderservice.dto.ProductResponse;
+import com.oms.orderservice.dto.*;
 import com.oms.orderservice.entity.Order;
 import com.oms.orderservice.entity.OrderAddress;
 import com.oms.orderservice.entity.OrderItem;
@@ -33,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -46,12 +40,7 @@ public class OrderService {
 
     public org.springframework.data.domain.Page<OrderResponse> getMyOrders(String userId, org.springframework.data.domain.Pageable pageable) {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
-                .map(order -> OrderResponse.builder()
-                        .orderId(order.getId())
-                        .userId(order.getUserId())
-                        .status(order.getStatus().name())
-                        .message("Đơn hàng tạo lúc: " + order.getCreatedAt())
-                        .build());
+                .map(this::mapToOrderResponse);
     }
 
     @Transactional
@@ -65,10 +54,9 @@ public class OrderService {
         List<InventoryReserveRequest> reserveRequests = new ArrayList<>();
 
         for (OrderItemRequest itemReq : request.getOrderItems()) {
-            // Lấy thông tin giá chuẩn từ Product Service, bảo mật giá tuyệt đối
             ApiResponse<ProductResponse> productApiRes = productClient.getProductById(itemReq.getProductId());
             if (productApiRes == null || !productApiRes.isSuccess() || productApiRes.getResult() == null) {
-                throw new AppException(OrderErrorCode.ORDER_CREATION_FAILED); // Hoặc PRODUCT_NOT_FOUND
+                throw new AppException(OrderErrorCode.ORDER_CREATION_FAILED);
             }
             ProductResponse product = productApiRes.getResult();
             BigDecimal itemPrice = product.getPrice();
@@ -91,12 +79,7 @@ public class OrderService {
 
         AddressRequest addrReq = request.getAddress();
         OrderAddress shippingAddress = new OrderAddress();
-        shippingAddress.setStreet(addrReq.getStreet());
-        shippingAddress.setWard(addrReq.getWard());
-        shippingAddress.setDistrict(addrReq.getDistrict());
-        shippingAddress.setCity(addrReq.getCity());
-        shippingAddress.setReceiverName(addrReq.getReceiverName());
-        shippingAddress.setReceiverPhone(addrReq.getReceiverPhone());
+        BeanUtils.copyProperties(addrReq, shippingAddress);
 
         Order order = Order.builder()
                 .id(orderId)
@@ -113,13 +96,11 @@ public class OrderService {
 
         boolean inventoryReserved = false;
         try {
-            // Gọi bulk api duy nhất 1 lần để giữ kho
             reserveInventory(reserveRequests);
             inventoryReserved = true;
 
             orderRepository.save(order);
 
-            // Bắn event payment
             PaymentCommand command = PaymentCommand.builder()
                     .orderId(orderId)
                     .userId(request.getUserId())
@@ -136,7 +117,6 @@ public class OrderService {
             log.error("Lỗi tạo đơn hàng {}: {}", orderId, ex.getMessage());
 
             if (inventoryReserved) {
-                // Rollback lại kho cho từng item
                 for (OrderItem item : orderItems) {
                     InventoryCommand rollbackCmd = new InventoryCommand(orderId, item.getProductId(), item.getQuantity(), "ROLLBACK");
                     rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK, rollbackCmd);
@@ -162,42 +142,38 @@ public class OrderService {
                 .orElseThrow(() -> new AppException(OrderErrorCode.ORDER_NOT_FOUND));
 
         if (order.getStatus() != OrderStatus.CONFIRMED) {
-            log.error("Không thể duyệt đơn hàng {}. Trạng thái hiện tại: {}", orderId, order.getStatus());
             throw new AppException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
 
-        // 1. Cập nhật trạng thái DB
         order.setStatus(OrderStatus.SHIPPING);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
-        log.info("Đã cập nhật đơn hàng {} sang trạng thái SHIPPING", orderId);
 
-        // 2. Gửi lệnh tạo vận đơn sang Delivery Service
+        NotificationEvent notifyEvent = NotificationEvent.builder()
+                .orderId(orderId)
+                .userId(order.getUserId())
+                .status("SHIPPING")
+                .message("Đơn hàng đã được duyệt và đang chuẩn bị giao cho đơn vị vận chuyển.")
+                .build();
+        rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.NOTIFICATION_ORDER_STATUS, notifyEvent);
+
         try {
             OrderAddress addr = order.getShippingAddress();
-            
-            // Xử lý ghép địa chỉ an toàn (bỏ qua null/empty)
             String fullAddress = java.util.stream.Stream.of(
                     addr.getStreet(), addr.getWard(), addr.getDistrict(), addr.getCity())
                     .filter(s -> s != null && !s.isEmpty())
                     .collect(java.util.stream.Collectors.joining(", "));
-            log.info("[SAGA] Chuẩn bị gửi lệnh tạo vận đơn. Người nhận: {}, SĐT: {}, Địa chỉ: {}", 
-                    addr.getReceiverName(), addr.getReceiverPhone(), fullAddress);
 
-            com.oms.orderservice.dto.DeliveryRequest deliveryRequest = com.oms.orderservice.dto.DeliveryRequest.builder()
+            DeliveryRequest deliveryRequest = DeliveryRequest.builder()
                     .orderId(orderId)
                     .receiverName(addr.getReceiverName())
                     .receiverPhone(addr.getReceiverPhone())
                     .address(fullAddress)
                     .build();
 
-            log.info("[SAGA] Đang gửi lệnh tạo vận đơn cho Order: {}", orderId);
             rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_COMMAND_CREATE, deliveryRequest);
-            log.info("[SAGA] Đã gửi tin nhắn thành công cho Order: {}", orderId);
-
         } catch (Exception e) {
-            log.error("[SAGA] Lỗi khi gửi lệnh tạo vận đơn cho Order {}: {}", orderId, e.getMessage(), e);
-            // Có thể cân nhắc bắn bù hoặc xử lý retry ở đây nếu cần
+            log.error("Lỗi khi gửi lệnh tạo vận đơn cho Order {}: {}", orderId, e.getMessage());
         }
     }
 
@@ -228,11 +204,43 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(OrderErrorCode.ORDER_NOT_FOUND));
 
+        return mapToOrderResponse(order);
+    }
+
+    private OrderResponse mapToOrderResponse(Order order) {
+        List<OrderItemResponse> itemResponses = order.getOrderItems().stream()
+                .map(item -> OrderItemResponse.builder()
+                        .productId(item.getProductId())
+                        .productName(item.getProductName())
+                        .price(item.getPrice())
+                        .quantity(item.getQuantity())
+                        .build())
+                .collect(Collectors.toList());
+
+        AddressRequest addrResponse = new AddressRequest();
+        if (order.getShippingAddress() != null) {
+            BeanUtils.copyProperties(order.getShippingAddress(), addrResponse);
+        }
+
         return OrderResponse.builder()
                 .orderId(order.getId())
                 .userId(order.getUserId())
                 .status(order.getStatus().name())
-                .message("Thông tin đơn hàng")
+                .message("Chi tiết đơn hàng #" + order.getId())
+                .totalAmount(order.getTotalAmount())
+                .paymentId(order.getPaymentId())
+                .deliveryId(order.getDeliveryId())
+                .errorMessage(order.getErrorMessage())
+                .createdAt(order.getCreatedAt())
+                .updatedAt(order.getUpdatedAt())
+                .shippingAddress(addrResponse)
+                .orderItems(itemResponses)
                 .build();
+    }
+
+    public String getUserIdByOrderId(String orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException(OrderErrorCode.ORDER_NOT_FOUND));
+        return order.getUserId();
     }
 }

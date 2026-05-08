@@ -13,10 +13,10 @@ spring:
       ddl-auto: update
     show-sql: true
   rabbitmq:
-        host: ${SPRING_RABBITMQ_HOST:localhost}
-        port: ${SPRING_RABBITMQ_PORT:5672}
-        user: guest
-        password: guest
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:user}
+    password: ${SPRING_RABBITMQ_PASSWORD:password}
 eureka:
   client:
     service-url:

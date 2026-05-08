@@ -68,6 +68,15 @@ public class OrderSagaOrchestrator {
             finalOrder.setStatus(OrderStatus.CONFIRMED);
             finalOrder.setPaymentId(payload.getTransactionId());
             
+            // Bắn thông báo đơn hàng thành công (CONFIRMED)
+            com.oms.orderservice.dto.NotificationEvent notifyEvent = com.oms.orderservice.dto.NotificationEvent.builder()
+                    .orderId(finalOrder.getId())
+                    .userId(finalOrder.getUserId())
+                    .status("CONFIRMED")
+                    .message("Thanh toán thành công. Đơn hàng đang chờ đóng gói.")
+                    .build();
+            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.NOTIFICATION_ORDER_STATUS, notifyEvent);
+
             finalOrder.getOrderItems().forEach(item -> {
                 InventoryCommand confirmCmd = new InventoryCommand(finalOrder.getId(), item.getProductId(), item.getQuantity(), "CONFIRM");
                 rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_CONFIRM, confirmCmd);
@@ -98,15 +107,17 @@ public class OrderSagaOrchestrator {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
-        if ("COMPLETED".equalsIgnoreCase(status)) {
-            log.info("[SAGA] Delivery COMPLETED for order {}. Order is now COMPLETED.", orderId);
+        if ("DELIVERED".equalsIgnoreCase(status)) {
+            log.info("[SAGA] Delivery DELIVERED for order {}. Order is now COMPLETED.", orderId);
             order.setStatus(OrderStatus.COMPLETED);
             order.setDeliveryId(payload.getDeliveryId());
-        } else if ("FAILED".equalsIgnoreCase(status)) {
-            String failReason = payload.getFailReason() != null ? payload.getFailReason() : "Unknown delivery error";
-            log.info("[SAGA] Delivery FAILED for order {}. Reason: {}. Order is now CANCELLED.", orderId, failReason);
+        } else if ("RETURNED".equalsIgnoreCase(status)) {
+            log.info("[SAGA] Delivery RETURNED for order {}. Order is now CANCELLED.", orderId);
             order.setStatus(OrderStatus.CANCELLED);
-            order.setErrorMessage("Giao hàng thất bại: " + failReason);
+            order.setErrorMessage("Giao hàng bị trả lại (RETURNED)");
+        } else {
+            log.info("[SAGA] Received delivery status update: {} for order {}. No action taken.", status, orderId);
+            return;
         }
         
         order.setUpdatedAt(LocalDateTime.now());

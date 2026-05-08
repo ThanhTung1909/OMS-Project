@@ -22,6 +22,8 @@ public class RabbitMQConstants {
     // Delivery
     public static final String DELIVERY_COMMAND_CREATE = "delivery.command.create";
     public static final String DELIVERY_STATUS_UPDATE = "delivery.status.update";
+
+    public static final String RK_DELIVERY_STATUS_UPDATE = DELIVERY_STATUS_UPDATE;
     
     // Notification
     public static final String NOTIFICATION_ORDER_STATUS = "notification.order.status";

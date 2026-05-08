@@ -107,4 +107,9 @@ public class OrderController {
                 .message("Đã hủy đơn")
                 .build());
     }
+
+    @GetMapping("/internal/{orderId}/user-id")
+    public ResponseEntity<String> getUserIdByOrderId(@PathVariable String orderId) {
+        return ResponseEntity.ok(orderService.getUserIdByOrderId(orderId));
+    }
 }

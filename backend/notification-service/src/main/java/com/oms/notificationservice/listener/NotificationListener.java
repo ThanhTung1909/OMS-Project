@@ -26,6 +26,7 @@ public class NotificationListener {
     private final OrderClient orderClient;
     private final AccountClient accountClient;
     private final ProfileClient profileClient;
+    private final com.oms.notificationservice.repository.NotificationLogRepository notificationLogRepository;
 
     /**
      * Lắng nghe sự kiện tạo tài khoản thành công
@@ -42,18 +43,45 @@ public class NotificationListener {
     }
 
     /**
-     * Lắng nghe các sự kiện cập nhật trạng thái đơn hàng và vận chuyển
+     * Lắng nghe các sự kiện cập nhật trạng thái đơn hàng (CONFIRMED, SHIPPING, etc.)
      */
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NOTIFICATION_ORDER_STATUS)
     public void handleOrderStatusUpdate(NotificationEvent event) {
-        log.info("Nhận sự kiện cập nhật trạng thái cho đơn hàng: {}", event.getOrderId());
+        log.info("Nhận sự kiện cập nhật trạng thái cho đơn hàng: {}, Status: {}", event.getOrderId(), event.getStatus());
         
-        String subject = "Cập nhật trạng thái đơn hàng #" + event.getOrderId();
-        String body = String.format("Chào %s,\n\nĐơn hàng #%s của bạn đã chuyển sang trạng thái: %s.\n%s", 
-                event.getCustomerName(), event.getOrderId(), event.getStatus(), 
-                event.getMessage() != null ? event.getMessage() : "");
-        
-        emailService.sendEmail(event.getCustomerEmail(), subject, body);
+        try {
+            String userId = event.getUserId();
+            if (userId == null) {
+                // Fallback nếu event cũ không có userId
+                userId = orderClient.getUserIdByOrderId(event.getOrderId());
+            }
+
+            // 1. Lưu In-App Notification
+            String title = "Cập nhật đơn hàng";
+            String content = event.getMessage() != null ? event.getMessage() : "Đơn hàng của bạn đã chuyển sang trạng thái: " + event.getStatus();
+            
+            com.oms.notificationservice.entity.NotificationLog logEntry = com.oms.notificationservice.entity.NotificationLog.builder()
+                    .userId(userId)
+                    .title(title)
+                    .content(content)
+                    .build();
+            notificationLogRepository.save(logEntry);
+            log.info("Đã lưu In-App Notification (Order Status) cho user: {}", userId);
+
+            // 2. Gửi Email (Tùy chọn: Có thể cấu hình gửi cho mọi trạng thái hoặc chỉ một số)
+            var accountRes = accountClient.getAccountById(userId);
+            if (accountRes != null && accountRes.isSuccess() && accountRes.getResult() != null) {
+                String customerEmail = accountRes.getResult().getEmail();
+                String subject = "Cập nhật đơn hàng #" + event.getOrderId();
+                String body = String.format("Chào bạn,\n\nĐơn hàng #%s của bạn đã có cập nhật: %s\n%s", 
+                        event.getOrderId(), event.getStatus(), content);
+                
+                emailService.sendEmail(customerEmail, subject, body);
+            }
+            
+        } catch (Exception e) {
+            log.error("Lỗi khi xử lý thông báo trạng thái đơn hàng: {}", e.getMessage());
+        }
     }
 
     /**
@@ -66,47 +94,48 @@ public class NotificationListener {
 
         try {
             // Bước 1: Gọi Order Service để lấy accountId (được lưu trong trường userId của đơn hàng)
-            log.info("[SYNC] Đang lấy thông tin đơn hàng từ Order Service...");
-            var orderRes = orderClient.getOrderById(payload.getOrderId());
-            if (orderRes == null || !orderRes.isSuccess() || orderRes.getResult() == null) {
-                log.error("LỖI DỮ LIỆU: Không tìm thấy đơn hàng {} để gửi thông báo. Bỏ qua.", payload.getOrderId());
+            log.info("[SYNC] Đang lấy userId từ Order Service...");
+            String userId = orderClient.getUserIdByOrderId(payload.getOrderId());
+            if (userId == null) {
+                log.error("LỖI DỮ LIỆU: Không tìm thấy userId cho đơn hàng {}. Bỏ qua.", payload.getOrderId());
                 return;
             }
-            String accountId = orderRes.getResult().getUserId();
 
-            // Bước 2: Gọi Profile Service để lấy thông tin khách hàng (tên,...) bằng accountId
-            log.info("[SYNC] Đang lấy thông tin hồ sơ từ Profile Service cho accountId: {}...", accountId);
-            var profileRes = profileClient.getProfileByAccountId(accountId);
-            if (profileRes == null || !profileRes.isSuccess() || profileRes.getResult() == null) {
-                log.error("LỖI DỮ LIỆU: Không tìm thấy hồ sơ cho accountId: {}. Bỏ qua.", accountId);
-                return;
-            }
-            var profile = profileRes.getResult();
-
-            // Bước 3: Gọi Identity Service để lấy Email khách hàng bằng accountId
-            log.info("[SYNC] Đang lấy thông tin tài khoản từ Identity Service cho accountId: {}...", accountId);
-            var accountRes = accountClient.getAccountById(accountId);
-            if (accountRes == null || !accountRes.isSuccess() || accountRes.getResult() == null) {
-                log.error("LỖI DỮ LIỆU: Không tìm thấy tài khoản {} để gửi thông báo. Bỏ qua.", accountId);
-                return;
-            }
-            String customerEmail = accountRes.getResult().getEmail();
-            String customerName = profile.getFullname(); // Lấy tên từ Profile cho chính xác
-
-            // Bước 4: Gửi email thông báo
-            String subject = "Cập nhật trạng thái vận chuyển đơn hàng #" + payload.getOrderId();
-            String statusDesc = "COMPLETED".equals(payload.getStatus()) ? "GIAO HÀNG THÀNH CÔNG" : "GIAO HÀNG THẤT BẠI";
+            // Bước 2: Tạo In-App Notification Log
+            String title = "Cập nhật vận chuyển";
+            String content = String.format("Đơn hàng %s đang ở trạng thái: %s. Shipper: %s - %s. Mã vận đơn: %s",
+                    payload.getOrderId(), payload.getStatus(), payload.getShipperName(), payload.getShipperPhone(), payload.getTrackingNumber());
             
-            String body = String.format("Chào %s,\n\nĐơn hàng #%s của bạn đã có cập nhật vận chuyển: %s.\n%s", 
-                    customerName, payload.getOrderId(), statusDesc, 
-                    payload.getFailReason() != null ? "Lý do: " + payload.getFailReason() : "");
+            com.oms.notificationservice.entity.NotificationLog logEntry = com.oms.notificationservice.entity.NotificationLog.builder()
+                    .userId(userId)
+                    .title(title)
+                    .content(content)
+                    .build();
+            notificationLogRepository.save(logEntry);
+            log.info("Đã lưu In-App Notification cho user: {}", userId);
 
-            emailService.sendEmail(customerEmail, subject, body);
-            log.info("Đã gửi lệnh gửi mail tới {} thành công.", customerEmail);
+            // Bước 3: Điều kiện gửi Email (CHỈ gửi nếu là DELIVERING hoặc DELIVERED)
+            String status = payload.getStatus();
+            if ("DELIVERING".equalsIgnoreCase(status) || "DELIVERED".equalsIgnoreCase(status)) {
+                log.info("[EMAIL] Đang xử lý gửi email cho trạng thái: {}", status);
+                
+                // Cần lấy Email từ Identity Service
+                var accountRes = accountClient.getAccountById(userId);
+                if (accountRes != null && accountRes.isSuccess() && accountRes.getResult() != null) {
+                    String customerEmail = accountRes.getResult().getEmail();
+                    String subject = "Cập nhật trạng thái vận chuyển đơn hàng #" + payload.getOrderId();
+                    String body = String.format("Chào bạn,\n\nĐơn hàng #%s của bạn đã chuyển sang trạng thái: %s.\nChi tiết shipper: %s - %s.\nCảm ơn bạn đã sử dụng dịch vụ!",
+                            payload.getOrderId(), status, payload.getShipperName(), payload.getShipperPhone());
+                    
+                    emailService.sendEmail(customerEmail, subject, body);
+                    log.info("Đã gửi email tới {} thành công.", customerEmail);
+                }
+            } else {
+                log.info("[EMAIL] Trạng thái {} không nằm trong danh sách gửi email. Bỏ qua.", status);
+            }
             
         } catch (Exception e) {
-            log.warn("[CASCADING FAILURE] Có lỗi khi gọi service phụ trợ (Order/Identity). Đang kích hoạt cơ chế Retry của RabbitMQ... Lỗi: {}", e.getMessage());
-            // Ném lại lỗi để RabbitMQ thực hiện Retry dựa trên cấu hình trong application.yml
+            log.warn("[CASCADING FAILURE] Có lỗi khi xử lý thông báo. Đang kích hoạt cơ chế Retry... Lỗi: {}", e.getMessage());
             throw e;
         }
     }

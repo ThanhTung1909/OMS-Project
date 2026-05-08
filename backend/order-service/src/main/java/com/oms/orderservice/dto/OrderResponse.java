@@ -5,6 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -14,4 +18,12 @@ public class OrderResponse {
     private String userId;
     private String status;
     private String message;
+    private BigDecimal totalAmount;
+    private String paymentId;
+    private String deliveryId;
+    private String errorMessage;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private AddressRequest shippingAddress;
+    private List<OrderItemResponse> orderItems;
 }

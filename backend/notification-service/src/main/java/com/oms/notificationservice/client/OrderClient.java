@@ -11,4 +11,7 @@ public interface OrderClient {
 
     @GetMapping("/api/v1/orders/{orderId}")
     ApiResponse<OrderResponse> getOrderById(@PathVariable("orderId") String orderId);
+
+    @GetMapping("/api/v1/orders/internal/{orderId}/user-id")
+    String getUserIdByOrderId(@PathVariable("orderId") String orderId);
 }

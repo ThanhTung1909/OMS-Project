@@ -84,6 +84,15 @@ public class PaymentService {
         String transactionId = UUID.randomUUID().toString();
         log.info("Starting payment processing for orderId: {}, transactionId: {}", orderId, transactionId);
 
+        // Giả lập thời gian chờ thanh toán 5 giây
+        try {
+            log.info("[SIMULATION] Đang giả lập xử lý thanh toán (5 giây)...");
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Payment simulation interrupted");
+        }
+
         Payment payment = paymentRepository.findByOrderId(orderId)
                 .orElse(new Payment());
         

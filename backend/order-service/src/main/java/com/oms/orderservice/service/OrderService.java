@@ -24,7 +24,9 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -243,6 +245,9 @@ public class OrderService {
                         .build())
                 .collect(Collectors.toList());
 
+        // Enrich hình ảnh sản phẩm từ Product Service
+        enrichProductImages(itemResponses);
+
         AddressRequest addrResponse = new AddressRequest();
         if (order.getShippingAddress() != null) {
             BeanUtils.copyProperties(order.getShippingAddress(), addrResponse);
@@ -269,5 +274,35 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(OrderErrorCode.ORDER_NOT_FOUND));
         return order.getUserId();
+    }
+
+    /**
+     * Enrich thumbnail hình ảnh sản phẩm cho từng OrderItemResponse.
+     * Gọi ProductClient theo từng productId, lấy ảnh đầu tiên (thumbnail).
+     * Fallback: imageUrl = null nếu Product Service không phản hồi hoặc sản phẩm không có ảnh.
+     *
+     * @param items Danh sách OrderItemResponse cần enrich
+     */
+    private void enrichProductImages(List<OrderItemResponse> items) {
+        if (items == null || items.isEmpty()) return;
+
+        // Build map productId -> thumbnail URL
+        Map<String, String> imageMap = new HashMap<>();
+        for (OrderItemResponse item : items) {
+            try {
+                ApiResponse<ProductResponse> res = productClient.getProductById(item.getProductId());
+                if (res != null && res.isSuccess() && res.getResult() != null) {
+                    List<String> urls = res.getResult().getImageUrl();
+                    if (urls != null && !urls.isEmpty()) {
+                        imageMap.put(item.getProductId(), urls.get(0));
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Không thể lấy hình ảnh cho sản phẩm {}: {}", item.getProductId(), e.getMessage());
+            }
+        }
+
+        // Gán thumbnail vào từng item (null nếu không có)
+        items.forEach(item -> item.setImageUrl(imageMap.get(item.getProductId())));
     }
 }

@@ -10,24 +10,28 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Configuration
 public class FeignConfig {
 
+    private static final String INTERNAL_SERVICE_ID   = "order-service";
+    private static final String INTERNAL_SERVICE_ROLE = "INTERNAL";
+
     @Bean
     public RequestInterceptor requestInterceptor() {
         return requestTemplate -> {
+            String accountId = null;
+            String userRole  = null;
+
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attributes != null) {
                 HttpServletRequest request = attributes.getRequest();
-                
-                // Propagate security headers from the current request to the Feign request
-                String accountId = request.getHeader("X-Account-Id");
-                String userRole = request.getHeader("X-User-Role");
-                
-                if (accountId != null) {
-                    requestTemplate.header("X-Account-Id", accountId);
-                }
-                if (userRole != null) {
-                    requestTemplate.header("X-User-Role", userRole);
-                }
+                accountId = request.getHeader("X-Account-Id");
+                userRole  = request.getHeader("X-User-Role");
             }
+
+            // Fallback: dùng danh tính nội bộ khi không có user context
+            if (accountId == null) accountId = INTERNAL_SERVICE_ID;
+            if (userRole  == null) userRole  = INTERNAL_SERVICE_ROLE;
+
+            requestTemplate.header("X-Account-Id", accountId);
+            requestTemplate.header("X-User-Role",  userRole);
         };
     }
 }

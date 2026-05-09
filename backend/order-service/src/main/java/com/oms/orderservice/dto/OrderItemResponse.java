@@ -16,4 +16,6 @@ public class OrderItemResponse {
     private String productName;
     private BigDecimal price;
     private int quantity;
+    /** Thumbnail hình ảnh sản phẩm (enrich từ Product Service) */
+    private String imageUrl;
 }

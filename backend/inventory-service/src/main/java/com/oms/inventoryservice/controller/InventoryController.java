@@ -10,6 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/inventory")
@@ -82,6 +85,24 @@ public class InventoryController {
                 .success(true)
                 .status(HttpStatus.OK.value())
                 .message("Giữ kho thành công")
+                .build()
+        );
+    }
+
+    /**
+     * Lấy số lượng tồn kho khả dụng cho nhiều sản phẩm trong một lần gọi.
+     * Được gọi nội bộ bởi Product Service
+     */
+    @PostMapping("/bulk-stock")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> getBulkStock(@RequestBody List<String> productIds) {
+        log.info("Received bulk-stock request for {} product(s)", productIds.size());
+        Map<String, Integer> stockMap = inventoryService.getBulkStock(productIds);
+        return ResponseEntity.ok(
+            ApiResponse.<Map<String, Integer>>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Thành công")
+                .result(stockMap)
                 .build()
         );
     }

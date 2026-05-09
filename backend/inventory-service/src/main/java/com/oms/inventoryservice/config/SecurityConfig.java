@@ -4,6 +4,7 @@ import com.oms.common.security.InternalAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -24,6 +25,10 @@ public class SecurityConfig {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
+                // Internal service-to-service endpoint: cho phép INTERNAL, ADMIN, STAFF
+                .requestMatchers(HttpMethod.POST, "/api/v1/inventory/bulk-stock")
+                    .hasAnyRole("INTERNAL", "ADMIN", "STAFF")
+                // Các endpoint còn lại yêu cầu xác thực
                 .anyRequest().authenticated()
             )
             .addFilterBefore(internalAuthFilter, UsernamePasswordAuthenticationFilter.class);

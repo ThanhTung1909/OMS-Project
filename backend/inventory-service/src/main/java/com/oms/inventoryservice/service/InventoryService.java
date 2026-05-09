@@ -18,6 +18,7 @@ import com.oms.inventoryservice.repository.InventoryAuditLogRepository;
 import com.oms.common.ApiResponse;
 import java.util.Optional;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -200,7 +201,7 @@ public class InventoryService {
     }
 
     /**
-     * Giữ kho hàng loạt (dùng cho tạo đơn hàng)
+     * Giữ kho hàng loạt (dùng cho tạo đơn hàng - SAGA)
      */
     @Transactional
     public void reserveBulk(List<com.oms.inventoryservice.dto.InventoryReserveRequest> requests) {
@@ -213,5 +214,21 @@ public class InventoryService {
                     .build();
             updateInventory(updateReq);
         }
+    }
+
+    /**
+     * Lấy số lượng tồn kho khả dụng cho nhiều sản phẩm trong một lần gọi.
+     * Sử dụng SQL IN (...) thông qua findByProductIdIn.
+     * @param productIds Danh sách productId cần kiểm tra
+     * @return Map<productId, availableQuantity>
+     */
+    public Map<String, Integer> getBulkStock(List<String> productIds) {
+        log.info("Fetching bulk stock for {} product(s)", productIds.size());
+        List<Inventory> inventories = inventoryRepository.findByProductIdIn(productIds);
+        return inventories.stream()
+                .collect(Collectors.toMap(
+                        Inventory::getProductId,
+                        Inventory::getAvailableQuantity
+                ));
     }
 }

@@ -31,20 +31,17 @@ public class OrderController {
         request.setUserId(accountId);
         log.info("Nhận yêu cầu tạo đơn hàng cho Account: {}", accountId);
 
-        String orderId = orderService.createOrder(request);
+        OrderResponse result = orderService.createOrder(request);
 
-        OrderResponse result = OrderResponse.builder()
-                .orderId(orderId)
-                .userId(accountId)
-                .status("PAYMENT_PENDING")
-                .message("Đơn hàng đã được khởi tạo thành công. Vui lòng tiến hành thanh toán.")
-                .build();
+        String displayMessage = "COD".equalsIgnoreCase(request.getPaymentMethod()) 
+                ? "Đơn hàng COD đã được khởi tạo thành công." 
+                : "Đơn hàng đã được khởi tạo thành công. Vui lòng tiến hành thanh toán.";
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
             ApiResponse.<OrderResponse>builder()
                 .success(true)
                 .status(HttpStatus.CREATED.value())
-                .message("Thành công")
+                .message(displayMessage)
                 .result(result)
                 .build()
         );

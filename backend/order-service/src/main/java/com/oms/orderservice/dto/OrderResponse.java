@@ -21,6 +21,7 @@ public class OrderResponse {
     private BigDecimal totalAmount;
     private String paymentId;
     private String deliveryId;
+    private String paymentMethod;
     private String errorMessage;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

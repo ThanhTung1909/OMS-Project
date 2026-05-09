@@ -29,6 +29,7 @@ public class DeliveryService {
                 .receiverName(request.getReceiverName())
                 .receiverPhone(request.getReceiverPhone())
                 .address(request.getAddress())
+                .codAmount(request.getCodAmount())
                 .shipperName("OMS Logistics - Shipper")
                 .shipperPhone("0988888888")
                 .status(DeliveryStatus.READY_TO_UP)

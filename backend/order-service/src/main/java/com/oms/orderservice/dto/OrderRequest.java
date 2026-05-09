@@ -25,4 +25,6 @@ public class OrderRequest {
     @NotNull(message = "Thông tin địa chỉ giao hàng là bắt buộc")
     @Valid
     private AddressRequest address;
+
+    private String paymentMethod; // e.g., "VNPAY", "MOMO", "COD"
 }

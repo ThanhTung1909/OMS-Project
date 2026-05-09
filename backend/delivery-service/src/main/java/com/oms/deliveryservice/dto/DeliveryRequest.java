@@ -14,4 +14,5 @@ public class DeliveryRequest {
     private String receiverName;
     private String receiverPhone;
     private String address;
+    private java.math.BigDecimal codAmount;
 }

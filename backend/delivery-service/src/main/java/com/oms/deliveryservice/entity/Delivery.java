@@ -41,6 +41,8 @@ public class Delivery {
     @Column(length = 1000)
     private String address;
 
+    private java.math.BigDecimal codAmount;
+
     @Column(length = 500)
     private String failReason;
 

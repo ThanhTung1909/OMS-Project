@@ -44,7 +44,7 @@ public class OrderService {
     }
 
     @Transactional
-    public String createOrder(OrderRequest request) {
+    public OrderResponse createOrder(OrderRequest request) {
         String orderId = UUID.randomUUID().toString();
         log.info("Bắt đầu tạo đơn hàng {}. Thông tin người nhận từ request: Name={}, Phone={}", 
                 orderId, request.getAddress().getReceiverName(), request.getAddress().getReceiverPhone());
@@ -84,8 +84,9 @@ public class OrderService {
         Order order = Order.builder()
                 .id(orderId)
                 .userId(request.getUserId())
-                .status(OrderStatus.PAYMENT_PENDING)
+                .status("COD".equalsIgnoreCase(request.getPaymentMethod()) ? OrderStatus.CONFIRMED : OrderStatus.PAYMENT_PENDING)
                 .totalAmount(totalPrice)
+                .paymentMethod(request.getPaymentMethod())
                 .shippingAddress(shippingAddress)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -101,17 +102,37 @@ public class OrderService {
 
             orderRepository.save(order);
 
-            PaymentCommand command = PaymentCommand.builder()
-                    .orderId(orderId)
-                    .userId(request.getUserId())
-                    .amount(totalPrice)
-                    .description("Thanh toán đơn hàng: " + orderId)
-                    .build();
-            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.PAYMENT_COMMAND_CREATE, command);
+            if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
+                log.info("Order {} is COD. Confirming inventory and sending notification immediately.", orderId);
+                
+                // 1. Xác nhận kho luôn
+                for (OrderItem item : orderItems) {
+                    InventoryCommand confirmCmd = new InventoryCommand(orderId, item.getProductId(), item.getQuantity(), "CONFIRM");
+                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_CONFIRM, confirmCmd);
+                }
 
-            log.info("Order created with status PAYMENT_PENDING. Command sent to Payment Service for OrderId: {}", orderId);
+                // 2. Bắn thông báo
+                NotificationEvent notifyEvent = NotificationEvent.builder()
+                        .orderId(orderId)
+                        .userId(request.getUserId())
+                        .status("CONFIRMED")
+                        .message("Đơn hàng đã đặt thành công (COD). Đang chờ đóng gói.")
+                        .build();
+                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.NOTIFICATION_ORDER_STATUS, notifyEvent);
 
-            return orderId;
+            } else {
+                // Bắn event payment cho thanh toán online
+                PaymentCommand command = PaymentCommand.builder()
+                        .orderId(orderId)
+                        .userId(request.getUserId())
+                        .amount(totalPrice)
+                        .description("Thanh toán đơn hàng: " + orderId)
+                        .build();
+                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.PAYMENT_COMMAND_CREATE, command);
+                log.info("Order created with status PAYMENT_PENDING. Command sent to Payment Service for OrderId: {}", orderId);
+            }
+
+            return mapToOrderResponse(order);
 
         } catch (Exception ex) {
             log.error("Lỗi tạo đơn hàng {}: {}", orderId, ex.getMessage());
@@ -164,11 +185,16 @@ public class OrderService {
                     .filter(s -> s != null && !s.isEmpty())
                     .collect(java.util.stream.Collectors.joining(", "));
 
+            BigDecimal codAmount = "COD".equalsIgnoreCase(order.getPaymentMethod()) 
+                    ? order.getTotalAmount() 
+                    : BigDecimal.ZERO;
+
             DeliveryRequest deliveryRequest = DeliveryRequest.builder()
                     .orderId(orderId)
                     .receiverName(addr.getReceiverName())
                     .receiverPhone(addr.getReceiverPhone())
                     .address(fullAddress)
+                    .codAmount(codAmount)
                     .build();
 
             rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_COMMAND_CREATE, deliveryRequest);
@@ -230,6 +256,7 @@ public class OrderService {
                 .totalAmount(order.getTotalAmount())
                 .paymentId(order.getPaymentId())
                 .deliveryId(order.getDeliveryId())
+                .paymentMethod(order.getPaymentMethod())
                 .errorMessage(order.getErrorMessage())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())

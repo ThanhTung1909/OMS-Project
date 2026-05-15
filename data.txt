@@ -122,5 +122,5 @@ INSERT INTO hinh_anh (product_id, image_url) VALUES
 
 USE db_inventory;
 
-INSERT INTO inventory (id, product_id, available_quantity, reserved_quantity, created_at, updated_at, version)
-SELECT UUID(), id, 100, 0, NOW(), NOW(), 0 FROM db_product.product;
+INSERT INTO inventory (id, product_id, available_quantity, reserved_quantity, low_stock_threshold, created_at, updated_at, version)
+SELECT UUID(), id, 100, 0, 10, NOW(), NOW(), 0 FROM db_product.product;

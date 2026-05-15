@@ -28,6 +28,7 @@ public class RabbitMQConfig {
 
     public static final String QUEUE_PAYMENT_REPLY = "q.order.payment.reply";
     public static final String QUEUE_DELIVERY_STATUS = "q.order.delivery.status";
+    public static final String QUEUE_ORDER_COMMAND_UPDATE = "q.order.command.update";
 
     @Bean
     public TopicExchange omsExchange() {
@@ -45,6 +46,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue orderCommandUpdateQueue() {
+        return new Queue(QUEUE_ORDER_COMMAND_UPDATE, true);
+    }
+
+    @Bean
     public Binding bindingPaymentReply(Queue paymentReplyQueue, TopicExchange omsExchange) {
         return BindingBuilder.bind(paymentReplyQueue)
                 .to(omsExchange)
@@ -56,6 +62,13 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(deliveryStatusQueue)
                 .to(omsExchange)
                 .with(RabbitMQConstants.DELIVERY_STATUS_UPDATE);
+    }
+
+    @Bean
+    public Binding bindingOrderCommandUpdate(Queue orderCommandUpdateQueue, TopicExchange omsExchange) {
+        return BindingBuilder.bind(orderCommandUpdateQueue)
+                .to(omsExchange)
+                .with(RabbitMQConstants.RK_ORDER_COMMAND_UPDATE);
     }
 
     @Bean

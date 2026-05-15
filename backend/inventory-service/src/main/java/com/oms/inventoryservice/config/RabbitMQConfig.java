@@ -25,6 +25,7 @@ public class RabbitMQConfig {
 
     public static final String QUEUE_INVENTORY_CONFIRM = "q.inventory.confirm";
     public static final String QUEUE_INVENTORY_ROLLBACK = "q.inventory.rollback";
+    public static final String QUEUE_INVENTORY_RESERVE = "q.inventory.reserve";
 
     @Bean
     public TopicExchange omsExchange() {
@@ -42,6 +43,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue inventoryReserveQueue() {
+        return new Queue(QUEUE_INVENTORY_RESERVE, true);
+    }
+
+    @Bean
     public Binding bindingInventoryConfirm(Queue inventoryConfirmQueue, TopicExchange omsExchange) {
         return BindingBuilder.bind(inventoryConfirmQueue)
                 .to(omsExchange)
@@ -53,6 +59,13 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(inventoryRollbackQueue)
                 .to(omsExchange)
                 .with(RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK);
+    }
+
+    @Bean
+    public Binding bindingInventoryReserve(Queue inventoryReserveQueue, TopicExchange omsExchange) {
+        return BindingBuilder.bind(inventoryReserveQueue)
+                .to(omsExchange)
+                .with(RabbitMQConstants.INVENTORY_COMMAND_RESERVE);
     }
 
     @Bean

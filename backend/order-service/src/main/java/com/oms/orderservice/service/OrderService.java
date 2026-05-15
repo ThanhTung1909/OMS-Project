@@ -5,7 +5,7 @@ import com.oms.common.AppException;
 import com.oms.common.CommonErrorCode;
 import com.oms.common.constant.RabbitMQConstants;
 import com.oms.common.enums.OrderStatus;
-import com.oms.orderservice.client.InventoryClient;
+import com.oms.common.dto.*;
 import com.oms.orderservice.client.ProductClient;
 import com.oms.orderservice.dto.*;
 import com.oms.orderservice.entity.Order;
@@ -13,7 +13,6 @@ import com.oms.orderservice.entity.OrderAddress;
 import com.oms.orderservice.entity.OrderItem;
 import com.oms.orderservice.exception.OrderErrorCode;
 import com.oms.orderservice.repository.OrderRepository;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +35,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class OrderService {
     private final OrderRepository orderRepository;
-    private final InventoryClient inventoryClient;
     private final ProductClient productClient;
     private final RabbitTemplate rabbitTemplate;
 
@@ -48,12 +46,11 @@ public class OrderService {
     @Transactional
     public OrderResponse createOrder(OrderRequest request) {
         String orderId = UUID.randomUUID().toString();
-        log.info("Bắt đầu tạo đơn hàng {}. Thông tin người nhận từ request: Name={}, Phone={}", 
-                orderId, request.getAddress().getReceiverName(), request.getAddress().getReceiverPhone());
+        log.info("[ORDER-SERVICE] Khởi tạo đơn hàng: {}. User: {}", orderId, request.getUserId());
 
         BigDecimal totalPrice = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
-        List<InventoryReserveRequest> reserveRequests = new ArrayList<>();
+        List<OrderCreatedEvent.OrderItem> eventItems = new ArrayList<>();
 
         for (OrderItemRequest itemReq : request.getOrderItems()) {
             ApiResponse<ProductResponse> productApiRes = productClient.getProductById(itemReq.getProductId());
@@ -73,10 +70,12 @@ public class OrderService {
                     .build();
             orderItems.add(orderItem);
 
-            InventoryReserveRequest reserveReq = new InventoryReserveRequest();
-            reserveReq.setProductId(product.getId());
-            reserveReq.setQuantity(itemReq.getQuantity());
-            reserveRequests.add(reserveReq);
+            eventItems.add(OrderCreatedEvent.OrderItem.builder()
+                    .productId(product.getId())
+                    .productName(product.getName())
+                    .price(itemPrice)
+                    .quantity(itemReq.getQuantity())
+                    .build());
         }
 
         AddressRequest addrReq = request.getAddress();
@@ -86,7 +85,7 @@ public class OrderService {
         Order order = Order.builder()
                 .id(orderId)
                 .userId(request.getUserId())
-                .status("COD".equalsIgnoreCase(request.getPaymentMethod()) ? OrderStatus.CONFIRMED : OrderStatus.PAYMENT_PENDING)
+                .status(OrderStatus.PENDING_VALIDATION)
                 .totalAmount(totalPrice)
                 .paymentMethod(request.getPaymentMethod())
                 .shippingAddress(shippingAddress)
@@ -97,67 +96,24 @@ public class OrderService {
         orderItems.forEach(item -> item.setOrder(order));
         order.setOrderItems(orderItems);
 
-        boolean inventoryReserved = false;
-        try {
-            reserveInventory(reserveRequests);
-            inventoryReserved = true;
+        // Lưu đơn hàng vào DB với trạng thái PENDING_VALIDATION
+        orderRepository.save(order);
 
-            orderRepository.save(order);
+        // Chỉ bắn duy nhất 1 event OrderCreatedEvent để Orchestrator xử lý tiếp
+        OrderCreatedEvent event = OrderCreatedEvent.builder()
+                .orderId(orderId)
+                .userId(request.getUserId())
+                .totalAmount(totalPrice)
+                .items(eventItems)
+                .build();
 
-            if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
-                log.info("Order {} is COD. Confirming inventory and sending notification immediately.", orderId);
-                
-                // 1. Xác nhận kho luôn
-                for (OrderItem item : orderItems) {
-                    InventoryCommand confirmCmd = new InventoryCommand(orderId, item.getProductId(), item.getQuantity(), "CONFIRM");
-                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_CONFIRM, confirmCmd);
-                }
+        rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_EVENT_CREATED, event);
+        
+        log.info("[ORDER-SERVICE] Đã lưu đơn hàng và gửi sự kiện OrderCreatedEvent cho Orchestrator (Mã đơn: {})", orderId);
 
-                // 2. Bắn thông báo
-                NotificationEvent notifyEvent = NotificationEvent.builder()
-                        .orderId(orderId)
-                        .userId(request.getUserId())
-                        .status("CONFIRMED")
-                        .message("Đơn hàng đã đặt thành công (COD). Đang chờ đóng gói.")
-                        .build();
-                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.NOTIFICATION_ORDER_STATUS, notifyEvent);
-
-            } else {
-                // Bắn event payment cho thanh toán online
-                PaymentCommand command = PaymentCommand.builder()
-                        .orderId(orderId)
-                        .userId(request.getUserId())
-                        .amount(totalPrice)
-                        .description("Thanh toán đơn hàng: " + orderId)
-                        .build();
-                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.PAYMENT_COMMAND_CREATE, command);
-                log.info("Order created with status PAYMENT_PENDING. Command sent to Payment Service for OrderId: {}", orderId);
-            }
-
-            return mapToOrderResponse(order);
-
-        } catch (Exception ex) {
-            log.error("Lỗi tạo đơn hàng {}: {}", orderId, ex.getMessage());
-
-            if (inventoryReserved) {
-                for (OrderItem item : orderItems) {
-                    InventoryCommand rollbackCmd = new InventoryCommand(orderId, item.getProductId(), item.getQuantity(), "ROLLBACK");
-                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK, rollbackCmd);
-                }
-            }
-            throw new AppException(OrderErrorCode.ORDER_CREATION_FAILED);
-        }
+        return mapToOrderResponse(order);
     }
 
-    @CircuitBreaker(name = "inventoryCB", fallbackMethod = "fallbackReserve")
-    public void reserveInventory(List<InventoryReserveRequest> requests) {
-        inventoryClient.reserveBulk(requests);
-    }
-
-    public void fallbackReserve(List<InventoryReserveRequest> requests, Throwable t) {
-        log.error("Inventory Service is down. Cannot reserve inventory.", t);
-        throw new AppException(OrderErrorCode.ORDER_CREATION_FAILED);
-    }
 
     @Transactional
     public void prepareOrder(String orderId) {
@@ -172,6 +128,7 @@ public class OrderService {
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
 
+        // Gửi thông báo chuyển sang trạng thái đang giao
         NotificationEvent notifyEvent = NotificationEvent.builder()
                 .orderId(orderId)
                 .userId(order.getUserId())
@@ -201,7 +158,7 @@ public class OrderService {
 
             rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_COMMAND_CREATE, deliveryRequest);
         } catch (Exception e) {
-            log.error("Lỗi khi gửi lệnh tạo vận đơn cho Order {}: {}", orderId, e.getMessage());
+            log.error("[ORDER-SERVICE] Lỗi khi gửi lệnh tạo vận đơn cho đơn hàng {}: {}", orderId, e.getMessage());
         }
     }
 
@@ -214,18 +171,15 @@ public class OrderService {
             throw new AppException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        if (order.getStatus() != OrderStatus.PAYMENT_PENDING) {
+        // Logic hủy đơn hàng sẽ do Orchestrator điều phối nếu cần hoàn trả các bước khác.
+        // Ở đây chỉ hỗ trợ hủy nhanh nếu đơn đang chờ xác thực hoặc chờ thanh toán.
+        if (order.getStatus() != OrderStatus.PAYMENT_PENDING && order.getStatus() != OrderStatus.PENDING_VALIDATION) {
             throw new AppException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
 
         order.setStatus(OrderStatus.CANCELLED);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
-
-        for (OrderItem item : order.getOrderItems()) {
-            InventoryCommand rollbackCmd = new InventoryCommand(orderId, item.getProductId(), item.getQuantity(), "ROLLBACK");
-            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK, rollbackCmd);
-        }
     }
 
     public OrderResponse getOrder(String orderId) {
@@ -276,13 +230,6 @@ public class OrderService {
         return order.getUserId();
     }
 
-    /**
-     * Enrich thumbnail hình ảnh sản phẩm cho từng OrderItemResponse.
-     * Gọi ProductClient theo từng productId, lấy ảnh đầu tiên (thumbnail).
-     * Fallback: imageUrl = null nếu Product Service không phản hồi hoặc sản phẩm không có ảnh.
-     *
-     * @param items Danh sách OrderItemResponse cần enrich
-     */
     private void enrichProductImages(List<OrderItemResponse> items) {
         if (items == null || items.isEmpty()) return;
 

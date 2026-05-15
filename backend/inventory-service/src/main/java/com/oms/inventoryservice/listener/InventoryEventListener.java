@@ -18,6 +18,8 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import com.oms.common.constant.RedisConstants;
 
 import java.util.Optional;
 
@@ -40,6 +42,9 @@ public class InventoryEventListener {
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     /**
      * Xử lý lệnh giữ hàng (RESERVE) từ Orchestrator
@@ -70,6 +75,9 @@ public class InventoryEventListener {
             inventory.setAvailableQuantity(inventory.getAvailableQuantity() - command.getQuantity());
             inventory.setReservedQuantity(inventory.getReservedQuantity() + command.getQuantity());
             inventoryRepository.save(inventory);
+
+            // Cập nhật lên Redis (CQRS)
+            updateRedisStock(inventory.getProductId(), inventory.getAvailableQuantity());
 
             // 4. Lưu Audit Log
             auditLogRepository.save(InventoryAuditLog.builder()
@@ -149,6 +157,10 @@ public class InventoryEventListener {
 
             // Lưu Inventory cập nhật
             inventoryRepository.save(inventory);
+
+            // Cập nhật lên Redis (CQRS)
+            updateRedisStock(inventory.getProductId(), inventory.getAvailableQuantity());
+
             log.info("Inventory confirmed: productId={}, quantity reduced={}, remainingReserved={}",
                     command.getProductId(), command.getQuantity(), inventory.getReservedQuantity());
 
@@ -220,6 +232,10 @@ public class InventoryEventListener {
 
             // Lưu Inventory cập nhật
             inventoryRepository.save(inventory);
+
+            // Cập nhật lên Redis (CQRS)
+            updateRedisStock(inventory.getProductId(), inventory.getAvailableQuantity());
+
             log.info("Inventory rollback: productId={}, quantity restored={}, available now={}, reserved now={}",
                     command.getProductId(), command.getQuantity(),
                     inventory.getAvailableQuantity(), inventory.getReservedQuantity());
@@ -247,6 +263,15 @@ public class InventoryEventListener {
             log.error("Error processing ROLLBACK command for orderId: {}", command.getOrderId(), e);
             // Không throw exception để tránh re-queue message quá sâu
             // Có thể log vào database hoặc alerting system
+        }
+    }
+
+    private void updateRedisStock(String productId, int quantity) {
+        try {
+            String redisKey = RedisConstants.PREFIX_INVENTORY_STOCK + productId;
+            stringRedisTemplate.opsForValue().set(redisKey, String.valueOf(quantity));
+        } catch (Exception e) {
+            log.error("Lỗi khi cập nhật tồn kho lên Redis cho sản phẩm {}: {}", productId, e.getMessage());
         }
     }
 }

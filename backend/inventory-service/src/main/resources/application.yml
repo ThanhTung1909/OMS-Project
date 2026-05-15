@@ -12,6 +12,10 @@ spring:
         hibernate:
             ddl-auto: update
         show-sql: true
+    data:
+        redis:
+            host: ${SPRING_DATA_REDIS_HOST:redis}
+            port: ${SPRING_DATA_REDIS_PORT:6379}
     rabbitmq:
         host: ${SPRING_RABBITMQ_HOST:rabbitmq}
         port: ${SPRING_RABBITMQ_PORT:5672}

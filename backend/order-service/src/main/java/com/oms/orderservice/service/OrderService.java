@@ -8,7 +8,6 @@ import com.oms.common.enums.OrderStatus;
 import com.oms.common.dto.DeliveryCommand;
 import com.oms.common.dto.NotificationEvent;
 import com.oms.common.dto.OrderCreatedEvent;
-import com.oms.orderservice.client.ProductClient;
 import com.oms.orderservice.dto.*;
 import com.oms.orderservice.entity.Order;
 import com.oms.orderservice.entity.OrderAddress;
@@ -20,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import com.oms.common.constant.RedisConstants;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -37,8 +38,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class OrderService {
     private final OrderRepository orderRepository;
-    private final ProductClient productClient;
     private final RabbitTemplate rabbitTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
     public org.springframework.data.domain.Page<OrderResponse> getMyOrders(String userId, org.springframework.data.domain.Pageable pageable) {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
@@ -55,26 +56,34 @@ public class OrderService {
         List<OrderCreatedEvent.OrderItem> eventItems = new ArrayList<>();
 
         for (OrderItemRequest itemReq : request.getOrderItems()) {
-            ApiResponse<ProductResponse> productApiRes = productClient.getProductById(itemReq.getProductId());
-            if (productApiRes == null || !productApiRes.isSuccess() || productApiRes.getResult() == null) {
-                throw new AppException(OrderErrorCode.ORDER_CREATION_FAILED);
+            // 1. Lấy Giá và Tên từ Redis (CQRS - Shared Redis)
+            String priceKey = RedisConstants.PREFIX_PRODUCT_PRICE + itemReq.getProductId();
+            String nameKey = RedisConstants.PREFIX_PRODUCT_NAME + itemReq.getProductId();
+            
+            String priceStr = stringRedisTemplate.opsForValue().get(priceKey);
+            String productName = stringRedisTemplate.opsForValue().get(nameKey);
+
+            if (priceStr == null || productName == null) {
+                log.warn("[ORDER-SERVICE] Không tìm thấy dữ liệu sản phẩm {} trong Redis. Fallback: {}", 
+                        itemReq.getProductId(), "ORDER_CREATION_FAILED");
+                throw new AppException(OrderErrorCode.PRODUCT_NOT_FOUND);
             }
-            ProductResponse product = productApiRes.getResult();
-            BigDecimal itemPrice = product.getPrice();
+
+            BigDecimal itemPrice = new BigDecimal(priceStr);
             
             totalPrice = totalPrice.add(itemPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity())));
 
             OrderItem orderItem = OrderItem.builder()
-                    .productId(product.getId())
-                    .productName(product.getName())
+                    .productId(itemReq.getProductId())
+                    .productName(productName)
                     .price(itemPrice)
                     .quantity(itemReq.getQuantity())
                     .build();
             orderItems.add(orderItem);
 
             eventItems.add(OrderCreatedEvent.OrderItem.builder()
-                    .productId(product.getId())
-                    .productName(product.getName())
+                    .productId(itemReq.getProductId())
+                    .productName(productName)
                     .price(itemPrice)
                     .quantity(itemReq.getQuantity())
                     .build());
@@ -243,19 +252,18 @@ public class OrderService {
     private void enrichProductImages(List<OrderItemResponse> items) {
         if (items == null || items.isEmpty()) return;
 
-        // Build map productId -> thumbnail URL
+        // Build map productId -> thumbnail URL from Redis (CQRS)
         Map<String, String> imageMap = new HashMap<>();
         for (OrderItemResponse item : items) {
             try {
-                ApiResponse<ProductResponse> res = productClient.getProductById(item.getProductId());
-                if (res != null && res.isSuccess() && res.getResult() != null) {
-                    List<String> urls = res.getResult().getImageUrl();
-                    if (urls != null && !urls.isEmpty()) {
-                        imageMap.put(item.getProductId(), urls.get(0));
-                    }
+                String imageKey = RedisConstants.PREFIX_PRODUCT_IMAGE + item.getProductId();
+                String imageUrl = stringRedisTemplate.opsForValue().get(imageKey);
+                
+                if (imageUrl != null) {
+                    imageMap.put(item.getProductId(), imageUrl);
                 }
             } catch (Exception e) {
-                log.warn("Không thể lấy hình ảnh cho sản phẩm {}: {}", item.getProductId(), e.getMessage());
+                log.warn("Không thể lấy hình ảnh cho sản phẩm {} từ Redis: {}", item.getProductId(), e.getMessage());
             }
         }
 

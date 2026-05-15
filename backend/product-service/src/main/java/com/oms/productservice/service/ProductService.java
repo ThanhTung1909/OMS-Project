@@ -18,6 +18,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 
 import java.util.Collections;
 import java.util.List;
@@ -31,6 +33,10 @@ public class ProductService {
     private final ProductRepository productrepo;
     private final CategoryRepository categoryRepo;
     private final InventoryClient inventoryClient;
+
+    @Autowired
+    @Lazy
+    private ProductService self;
 
     @Transactional
     public ProductResponse createProduct(ProductRequest request){
@@ -66,15 +72,21 @@ public class ProductService {
         return page;
     }
 
-    @Cacheable(value = "products", key = "#id")
     public ProductResponse getProductById(String id){
-        log.info("Fetching product from DB for ID: {}", id);
+        // 1. Lấy dữ liệu tĩnh (Sẽ lôi từ Cache ra nếu có)
+        ProductResponse response = self.getCachedProductBase(id);
+        // 2. Đắp dữ liệu động
+        enrichStockQuantity(Collections.singletonList(response));
+        
+        return response;
+    }
+
+    @Cacheable(value = "products", key = "#id")
+    public ProductResponse getCachedProductBase(String id) {
+        log.info("Đang lấy thông tin sản phẩm từ DB cho ID: {}", id);
         Product product = productrepo.findById(id)
                 .orElseThrow(() -> new AppException(ProductErrorCode.PRODUCT_NOT_FOUND));
-        ProductResponse response = mapToProductResponse(product);
-        // Enrich tồn kho cho sản phẩm đơn lẻ
-        enrichStockQuantity(Collections.singletonList(response));
-        return response;
+        return mapToProductResponse(product);
     }
 
     @Transactional
@@ -122,13 +134,7 @@ public class ProductService {
                 .build();
     }
 
-    /**
-     * Enrich danh sách ProductResponse với số lượng tồn kho từ Inventory Service.
-     * Dùng batch API (POST /bulk-stock) để chỉ thực hiện 1 lần gọi HTTP bất kể có bao nhiêu sản phẩm
-     * Nếu Inventory Service không phản hồi hoặc có lỗi, stockQuantity sế được gán về 0 (fallback an toàn).
-     *
-     * @param products Danh sách ProductResponse cần enrich
-     */
+    
     private void enrichStockQuantity(List<ProductResponse> products) {
         if (products == null || products.isEmpty()) return;
 

@@ -1,6 +1,8 @@
 package com.oms.orderservice.service;
 
+import com.oms.common.dto.DeliveryUpdatePayload;
 import com.oms.common.dto.OrderStatusUpdateCommand;
+import com.oms.common.enums.OrderStatus;
 import com.oms.orderservice.config.RabbitMQConfig;
 import com.oms.orderservice.entity.Order;
 import com.oms.orderservice.repository.OrderRepository;
@@ -45,11 +47,45 @@ public class OrderCommandHandler {
 
         if (command.getErrorMessage() != null) {
             order.setErrorMessage(command.getErrorMessage());
-        } else if (command.getMessage() != null) {
-            order.setErrorMessage(command.getMessage());
+        } else {
+            // Nếu không có lỗi, đảm bảo errorMessage là null (tránh gán message thành công vào error)
+            order.setErrorMessage(null);
         }
 
         orderRepository.save(order);
         log.info("[ORDER-SERVICE] Đã cập nhật đơn hàng {} sang trạng thái {}", order.getId(), order.getStatus());
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_DELIVERY_STATUS)
+    @Transactional
+    public void handleDeliveryStatusUpdate(DeliveryUpdatePayload payload) {
+        if (payload == null || payload.getOrderId() == null) return;
+
+        log.info("[ORDER-SERVICE] Nhận cập nhật trạng thái vận đơn: {}, DeliveryId: {}, Status: {}", 
+                payload.getOrderId(), payload.getDeliveryId(), payload.getStatus());
+
+        Order order = orderRepository.findById(payload.getOrderId()).orElse(null);
+        if (order == null) {
+            log.error("[ORDER-SERVICE] Không tìm thấy đơn hàng cho vận đơn: {}", payload.getOrderId());
+            return;
+        }
+
+        // 1. Cập nhật deliveryId ngay khi nhận được (bất kể trạng thái nào)
+        if (payload.getDeliveryId() != null) {
+            order.setDeliveryId(payload.getDeliveryId());
+        }
+
+        // 2. Cập nhật trạng thái đơn hàng dựa trên vận đơn
+        String status = payload.getStatus();
+        if ("COMPLETED".equals(status) || "DELIVERED".equals(status)) {
+            order.setStatus(OrderStatus.COMPLETED);
+            order.setErrorMessage(null);
+        } else if ("RETURNED".equals(status)) {
+            order.setStatus(OrderStatus.CANCELLED);
+            order.setErrorMessage("Giao hàng thất bại: " + payload.getFailReason());
+        }
+
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
     }
 }

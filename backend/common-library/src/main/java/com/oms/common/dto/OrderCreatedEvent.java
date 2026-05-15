@@ -16,6 +16,9 @@ public class OrderCreatedEvent {
     private String orderId;
     private String userId;
     private BigDecimal totalAmount;
+    private String receiverName;
+    private String receiverPhone;
+    private String address;
     private List<OrderItem> items;
 
     @Data

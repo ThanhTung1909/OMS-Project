@@ -2,6 +2,7 @@ package com.oms.orchestrator.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import com.oms.common.constant.RabbitMQConstants;
 import com.oms.common.dto.*;
 import com.oms.common.enums.OrderStatus;
@@ -15,6 +16,8 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @RequiredArgsConstructor
@@ -50,17 +53,21 @@ public class SagaStateMachineManager {
         sagaInstanceRepository.save(saga);
 
         // Bước 1: Giữ hàng trong kho (Reserve Inventory)
-        event.getItems().forEach(item -> {
-            InventoryCommand command = InventoryCommand.builder()
-                    .orderId(event.getOrderId())
-                    .productId(item.getProductId())
-                    .quantity(item.getQuantity())
-                    .type("RESERVE")
-                    .build();
-            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_RESERVE, command);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                event.getItems().forEach(item -> {
+                    InventoryCommand command = InventoryCommand.builder()
+                            .orderId(event.getOrderId())
+                            .productId(item.getProductId())
+                            .quantity(item.getQuantity())
+                            .type("RESERVE")
+                            .build();
+                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_RESERVE, command);
+                });
+                log.info("[ORCHESTRATOR] Đã gửi lệnh giữ hàng (RESERVE) cho đơn hàng: {}", event.getOrderId());
+            }
         });
-
-        log.info("[ORCHESTRATOR] Đã gửi lệnh giữ hàng (RESERVE) cho đơn hàng: {}", event.getOrderId());
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_ORCHESTRATOR_INVENTORY_REPLY)
@@ -94,7 +101,14 @@ public class SagaStateMachineManager {
                         .amount(originalEvent.getTotalAmount())
                         .description("Thanh toán đơn hàng: " + saga.getOrderId())
                         .build();
-                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.PAYMENT_COMMAND_CREATE, paymentCmd);
+
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.PAYMENT_COMMAND_CREATE, paymentCmd);
+                        log.info("[ORCHESTRATOR] Đã gửi lệnh thanh toán cho đơn hàng: {}", saga.getOrderId());
+                    }
+                });
             } catch (JsonProcessingException e) {
                 log.error("[ORCHESTRATOR] Lỗi khi đọc dữ liệu payload gốc", e);
             }
@@ -109,7 +123,14 @@ public class SagaStateMachineManager {
                     .newStatus(OrderStatus.CANCELLED)
                     .message("Kho báo lỗi: " + payload.getMessage())
                     .build();
-            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
+                    log.info("[ORCHESTRATOR] Đã gửi lệnh hủy đơn hàng sang Order Service: {}", saga.getOrderId());
+                }
+            });
         }
     }
 
@@ -139,25 +160,23 @@ public class SagaStateMachineManager {
                 OrderCreatedEvent originalEvent = objectMapper.readValue(saga.getPayload(), OrderCreatedEvent.class);
                 
                 // Bước 3a: Chốt kho (Confirm Inventory)
-                originalEvent.getItems().forEach(item -> {
-                    InventoryCommand confirmCmd = InventoryCommand.builder()
-                            .orderId(saga.getOrderId())
-                            .productId(item.getProductId())
-                            .quantity(item.getQuantity())
-                            .type("CONFIRM")
-                            .build();
-                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_CONFIRM, confirmCmd);
-                });
+                List<InventoryCommand> inventoryCommands = originalEvent.getItems().stream()
+                        .map(item -> InventoryCommand.builder()
+                                .orderId(saga.getOrderId())
+                                .productId(item.getProductId())
+                                .quantity(item.getQuantity())
+                                .type("CONFIRM")
+                                .build())
+                        .toList();
 
                 // Bước 3b: Tạo vận đơn giao hàng (Create Delivery)
-                DeliveryRequest deliveryReq = DeliveryRequest.builder()
+                DeliveryCommand deliveryCmd = DeliveryCommand.builder()
                         .orderId(saga.getOrderId())
-                        .receiverName("Khách hàng") 
-                        .receiverPhone("000000") 
-                        .address("Địa chỉ khách hàng") 
+                        .receiverName(originalEvent.getReceiverName())
+                        .receiverPhone(originalEvent.getReceiverPhone())
+                        .address(originalEvent.getAddress())
                         .codAmount(java.math.BigDecimal.ZERO)
                         .build();
-                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_COMMAND_CREATE, deliveryReq);
 
                 // Cập nhật trạng thái đơn hàng sang CONFIRMED
                 OrderStatusUpdateCommand updateCmd = OrderStatusUpdateCommand.builder()
@@ -166,7 +185,20 @@ public class SagaStateMachineManager {
                         .paymentId(payload.getTransactionId())
                         .message("Thanh toán thành công.")
                         .build();
-                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
+
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        inventoryCommands.forEach(cmd -> 
+                            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_CONFIRM, cmd));
+                        
+                        rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_COMMAND_CREATE, deliveryCmd);
+                        
+                        rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
+                        
+                        log.info("[ORCHESTRATOR] Đã gửi các lệnh hoàn tất (Confirm, Delivery, OrderUpdate) cho đơn hàng: {}", saga.getOrderId());
+                    }
+                });
 
             } catch (JsonProcessingException e) {
                 log.error("[ORCHESTRATOR] Lỗi khi giải mã dữ liệu payload", e);
@@ -181,15 +213,14 @@ public class SagaStateMachineManager {
                 OrderCreatedEvent originalEvent = objectMapper.readValue(saga.getPayload(), OrderCreatedEvent.class);
                 
                 // Hoàn kho (Rollback Inventory)
-                originalEvent.getItems().forEach(item -> {
-                    InventoryCommand rollbackCmd = InventoryCommand.builder()
-                            .orderId(saga.getOrderId())
-                            .productId(item.getProductId())
-                            .quantity(item.getQuantity())
-                            .type("ROLLBACK")
-                            .build();
-                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK, rollbackCmd);
-                });
+                List<InventoryCommand> rollbackCommands = originalEvent.getItems().stream()
+                        .map(item -> InventoryCommand.builder()
+                                .orderId(saga.getOrderId())
+                                .productId(item.getProductId())
+                                .quantity(item.getQuantity())
+                                .type("ROLLBACK")
+                                .build())
+                        .toList();
 
                 // Cập nhật trạng thái đơn hàng thành CANCELLED
                 OrderStatusUpdateCommand updateCmd = OrderStatusUpdateCommand.builder()
@@ -199,7 +230,18 @@ public class SagaStateMachineManager {
                         .errorMessage("Thanh toán thất bại: " + payload.getMessage())
                         .message("Thanh toán thất bại.")
                         .build();
-                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
+
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        rollbackCommands.forEach(cmd -> 
+                            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK, cmd));
+                        
+                        rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
+                        
+                        log.info("[ORCHESTRATOR] Đã gửi các lệnh rollback cho đơn hàng: {}", saga.getOrderId());
+                    }
+                });
 
             } catch (JsonProcessingException e) {
                 log.error("[ORCHESTRATOR] Lỗi khi giải mã dữ liệu payload", e);
@@ -230,7 +272,14 @@ public class SagaStateMachineManager {
                     .newStatus(OrderStatus.COMPLETED)
                     .message("Giao hàng thành công.")
                     .build();
-            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
+                    log.info("[ORCHESTRATOR] Đã gửi lệnh hoàn tất đơn hàng sang Order Service: {}", saga.getOrderId());
+                }
+            });
         }
     }
 }

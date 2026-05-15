@@ -22,7 +22,7 @@ public class DeliveryEventListener {
     private final DeliveryRepository deliveryRepository;
 
     @RabbitListener(queues = com.oms.deliveryservice.config.RabbitMQConfig.QUEUE_DELIVERY_COMMAND)
-    public void handleDeliveryCreateCommand(com.oms.deliveryservice.dto.DeliveryRequest payload) {
+    public void handleDeliveryCreateCommand(com.oms.deliveryservice.dto.DeliveryCommand payload) {
         if (payload == null || payload.getOrderId() == null) {
             log.warn("Received invalid delivery create command payload");
             return;

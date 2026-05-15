@@ -5,7 +5,9 @@ import com.oms.common.AppException;
 import com.oms.common.CommonErrorCode;
 import com.oms.common.constant.RabbitMQConstants;
 import com.oms.common.enums.OrderStatus;
-import com.oms.common.dto.*;
+import com.oms.common.dto.DeliveryCommand;
+import com.oms.common.dto.NotificationEvent;
+import com.oms.common.dto.OrderCreatedEvent;
 import com.oms.orderservice.client.ProductClient;
 import com.oms.orderservice.dto.*;
 import com.oms.orderservice.entity.Order;
@@ -100,10 +102,18 @@ public class OrderService {
         orderRepository.save(order);
 
         // Chỉ bắn duy nhất 1 event OrderCreatedEvent để Orchestrator xử lý tiếp
+        String fullAddress = java.util.stream.Stream.of(
+                        addrReq.getStreet(), addrReq.getWard(), addrReq.getDistrict(), addrReq.getCity())
+                .filter(s -> s != null && !s.isEmpty())
+                .collect(java.util.stream.Collectors.joining(", "));
+
         OrderCreatedEvent event = OrderCreatedEvent.builder()
                 .orderId(orderId)
                 .userId(request.getUserId())
                 .totalAmount(totalPrice)
+                .receiverName(addrReq.getReceiverName())
+                .receiverPhone(addrReq.getReceiverPhone())
+                .address(fullAddress)
                 .items(eventItems)
                 .build();
 
@@ -148,7 +158,7 @@ public class OrderService {
                     ? order.getTotalAmount() 
                     : BigDecimal.ZERO;
 
-            DeliveryRequest deliveryRequest = DeliveryRequest.builder()
+            DeliveryCommand deliveryCommand = DeliveryCommand.builder()
                     .orderId(orderId)
                     .receiverName(addr.getReceiverName())
                     .receiverPhone(addr.getReceiverPhone())
@@ -156,7 +166,7 @@ public class OrderService {
                     .codAmount(codAmount)
                     .build();
 
-            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_COMMAND_CREATE, deliveryRequest);
+            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_COMMAND_CREATE, deliveryCommand);
         } catch (Exception e) {
             log.error("[ORDER-SERVICE] Lỗi khi gửi lệnh tạo vận đơn cho đơn hàng {}: {}", orderId, e.getMessage());
         }

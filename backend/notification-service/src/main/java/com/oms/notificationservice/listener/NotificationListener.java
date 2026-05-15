@@ -1,13 +1,12 @@
 package com.oms.notificationservice.listener;
 
-import com.oms.common.ApiResponse;
 import com.oms.notificationservice.config.RabbitMQConfig;
-import com.oms.notificationservice.client.AccountClient;
 import com.oms.notificationservice.client.OrderClient;
-import com.oms.notificationservice.client.ProfileClient;
 import com.oms.notificationservice.dto.AccountCreatedEvent;
 import com.oms.notificationservice.dto.DeliveryUpdatePayload;
 import com.oms.notificationservice.dto.NotificationEvent;
+import com.oms.notificationservice.entity.UserReplicated;
+import com.oms.notificationservice.repository.UserReplicatedRepository;
 import com.oms.notificationservice.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +23,7 @@ public class NotificationListener {
 
     private final EmailService emailService;
     private final OrderClient orderClient;
-    private final AccountClient accountClient;
-    private final ProfileClient profileClient;
+    private final UserReplicatedRepository userReplicatedRepository;
     private final com.oms.notificationservice.repository.NotificationLogRepository notificationLogRepository;
 
     /**
@@ -33,8 +31,18 @@ public class NotificationListener {
      */
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NOTIFICATION_ACCOUNT_CREATE)
     public void handleAccountCreated(AccountCreatedEvent event) {
-        log.info("Nhận sự kiện tạo tài khoản cho user: {}", event.getUserName());
+        log.info("Nhận sự kiện tạo tài khoản cho user: {}. Tiến hành đồng bộ dữ liệu.", event.getUserName());
         
+        // 1. Đồng bộ dữ liệu người dùng (Data Replication)
+        UserReplicated user = UserReplicated.builder()
+                .accountId(event.getAccountId())
+                .email(event.getEmail())
+                .fullname(event.getFullname())
+                .build();
+        userReplicatedRepository.save(user);
+        log.info("Đã đồng bộ thông tin người dùng {} vào DB nội bộ của Notification Service.", event.getAccountId());
+
+        // 2. Gửi email chào mừng
         String subject = "Chào mừng bạn đến với OMS!";
         String body = String.format("Chào %s,\n\nTài khoản của bạn đã được tạo thành công với vai trò %s.\nChúc bạn có trải nghiệm tuyệt vời!", 
                 event.getFullname(), event.getRole());
@@ -50,11 +58,12 @@ public class NotificationListener {
         log.info("Nhận sự kiện cập nhật trạng thái cho đơn hàng: {}, Status: {}", event.getOrderId(), event.getStatus());
         
         try {
-            String userId = event.getUserId();
-            if (userId == null) {
+            String rawUserId = event.getUserId();
+            if (rawUserId == null) {
                 // Fallback nếu event cũ không có userId
-                userId = orderClient.getUserIdByOrderId(event.getOrderId());
+                rawUserId = orderClient.getUserIdByOrderId(event.getOrderId());
             }
+            final String userId = rawUserId; // Effectively final for use in lambda
 
             // 1. Lưu In-App Notification
             String title = "Cập nhật đơn hàng";
@@ -68,16 +77,14 @@ public class NotificationListener {
             notificationLogRepository.save(logEntry);
             log.info("Đã lưu In-App Notification (Order Status) cho user: {}", userId);
 
-            // 2. Gửi Email (Tùy chọn: Có thể cấu hình gửi cho mọi trạng thái hoặc chỉ một số)
-            var accountRes = accountClient.getAccountById(userId);
-            if (accountRes != null && accountRes.isSuccess() && accountRes.getResult() != null) {
-                String customerEmail = accountRes.getResult().getEmail();
+            // 2. Gửi Email (Lấy Email từ Database cục bộ)
+            userReplicatedRepository.findByAccountId(userId).ifPresentOrElse(user -> {
                 String subject = "Cập nhật đơn hàng #" + event.getOrderId();
                 String body = String.format("Chào bạn,\n\nĐơn hàng #%s của bạn đã có cập nhật: %s\n%s", 
                         event.getOrderId(), event.getStatus(), content);
                 
-                emailService.sendEmail(customerEmail, subject, body);
-            }
+                emailService.sendEmail(user.getEmail(), subject, body);
+            }, () -> log.warn("Không tìm thấy thông tin email cho user {} trong DB nội bộ để gửi thông báo đơn hàng.", userId));
             
         } catch (Exception e) {
             log.error("Lỗi khi xử lý thông báo trạng thái đơn hàng: {}", e.getMessage());
@@ -119,17 +126,15 @@ public class NotificationListener {
             if ("DELIVERING".equalsIgnoreCase(status) || "DELIVERED".equalsIgnoreCase(status)) {
                 log.info("[EMAIL] Đang xử lý gửi email cho trạng thái: {}", status);
                 
-                // Cần lấy Email từ Identity Service
-                var accountRes = accountClient.getAccountById(userId);
-                if (accountRes != null && accountRes.isSuccess() && accountRes.getResult() != null) {
-                    String customerEmail = accountRes.getResult().getEmail();
+                // Cần lấy Email từ Database cục bộ (Data Replication)
+                userReplicatedRepository.findByAccountId(userId).ifPresentOrElse(user -> {
                     String subject = "Cập nhật trạng thái vận chuyển đơn hàng #" + payload.getOrderId();
                     String body = String.format("Chào bạn,\n\nĐơn hàng #%s của bạn đã chuyển sang trạng thái: %s.\nChi tiết shipper: %s - %s.\nCảm ơn bạn đã sử dụng dịch vụ!",
                             payload.getOrderId(), status, payload.getShipperName(), payload.getShipperPhone());
                     
-                    emailService.sendEmail(customerEmail, subject, body);
-                    log.info("Đã gửi email tới {} thành công.", customerEmail);
-                }
+                    emailService.sendEmail(user.getEmail(), subject, body);
+                    log.info("Đã gửi email vận chuyển tới {} thành công.", user.getEmail());
+                }, () -> log.warn("Không tìm thấy thông tin email cho user {} trong DB nội bộ để gửi thông báo vận chuyển.", userId));
             } else {
                 log.info("[EMAIL] Trạng thái {} không nằm trong danh sách gửi email. Bỏ qua.", status);
             }

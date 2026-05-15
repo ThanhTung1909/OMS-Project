@@ -20,7 +20,7 @@ public class DeliveryService {
     private final DeliveryRepository deliveryRepository;
     private final RabbitTemplate rabbitTemplate;
 
-    public Delivery createDelivery(com.oms.deliveryservice.dto.DeliveryRequest request) {
+    public Delivery createDelivery(com.oms.deliveryservice.dto.DeliveryCommand request) {
         String trackingNumber = generateTrackingNumber();
         
         Delivery delivery = Delivery.builder()
@@ -37,6 +37,22 @@ public class DeliveryService {
                 
         Delivery savedDelivery = deliveryRepository.save(delivery);
         log.info("Created new delivery with tracking number {} for order {}", trackingNumber, request.getOrderId());
+        
+        // Gửi thông báo "vừa tạo xong" để Order Service cập nhật deliveryId
+        com.oms.deliveryservice.dto.DeliveryUpdatePayload event = com.oms.deliveryservice.dto.DeliveryUpdatePayload.builder()
+                .orderId(savedDelivery.getOrderId())
+                .deliveryId(savedDelivery.getId())
+                .status(savedDelivery.getStatus().name())
+                .trackingNumber(savedDelivery.getTrackingNumber())
+                .shipperName(savedDelivery.getShipperName())
+                .shipperPhone(savedDelivery.getShipperPhone())
+                .build();
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConstants.EXCHANGE_NAME,
+                RabbitMQConstants.RK_DELIVERY_STATUS_UPDATE,
+                event);
+
         return savedDelivery;
     }
 

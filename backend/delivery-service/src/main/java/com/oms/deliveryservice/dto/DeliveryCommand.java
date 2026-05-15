@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DeliveryRequest {
+public class DeliveryCommand {
     private String orderId;
     private String receiverName;
     private String receiverPhone;

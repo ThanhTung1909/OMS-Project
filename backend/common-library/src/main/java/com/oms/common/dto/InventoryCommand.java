@@ -1,4 +1,4 @@
-package com.oms.orderservice.dto;
+package com.oms.common.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,5 +17,5 @@ public class InventoryCommand implements Serializable {
     private String orderId;
     private String productId;
     private int quantity;
-    private String type; // "CONFIRM" hoặc "ROLLBACK"
+    private String type; // "RESERVE", "CONFIRM", "ROLLBACK"
 }

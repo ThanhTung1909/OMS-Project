@@ -1,5 +1,8 @@
 package com.oms.inventoryservice.listener;
 
+import com.oms.common.constant.RabbitMQConstants;
+import com.oms.common.dto.InventoryCommand;
+import com.oms.common.dto.InventoryResultPayload;
 import com.oms.inventoryservice.config.RabbitMQConfig;
 import com.oms.inventoryservice.dto.ConfirmOrderCommand;
 import com.oms.inventoryservice.dto.RollbackOrderCommand;
@@ -11,6 +14,7 @@ import com.oms.inventoryservice.entity.InventoryAuditLog;
 import com.oms.inventoryservice.repository.InventoryAuditLogRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,8 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 /**
- * Event Listener cho các command từ Order Service
- * Xử lý logic confirm và rollback inventory với cơ chế Idempotency
+ * Event Listener cho các command từ Orchestrator
+ * Xử lý logic reserve, confirm và rollback inventory với cơ chế Idempotency
  */
 @Slf4j
 @Service
@@ -33,6 +37,76 @@ public class InventoryEventListener {
 
     @Autowired
     private InventoryAuditLogRepository auditLogRepository;
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    /**
+     * Xử lý lệnh giữ hàng (RESERVE) từ Orchestrator
+     */
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_INVENTORY_RESERVE)
+    @Transactional
+    public void handleReserveOrder(InventoryCommand command) {
+        log.info("[INVENTORY] Nhận lệnh RESERVE cho đơn hàng: {}, Sản phẩm: {}, Số lượng: {}", 
+                command.getOrderId(), command.getProductId(), command.getQuantity());
+
+        try {
+            // 1. Kiểm tra Idempotency
+            if (processedEventRepository.existsByOrderId(command.getOrderId()) 
+                && processedEventRepository.findByOrderId(command.getOrderId()).get().getEventType() == ProcessedEvent.EventType.RESERVE) {
+                log.warn("[INVENTORY] Đơn hàng {} đã được xử lý RESERVE. Bỏ qua.", command.getOrderId());
+                return;
+            }
+
+            // 2. Tìm kho và kiểm tra tồn kho
+            Inventory inventory = inventoryRepository.findByProductId(command.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm trong kho: " + command.getProductId()));
+
+            if (inventory.getAvailableQuantity() < command.getQuantity()) {
+                throw new RuntimeException("Không đủ hàng trong kho. Còn lại: " + inventory.getAvailableQuantity());
+            }
+
+            // 3. Thực hiện giữ hàng (Reserve)
+            inventory.setAvailableQuantity(inventory.getAvailableQuantity() - command.getQuantity());
+            inventory.setReservedQuantity(inventory.getReservedQuantity() + command.getQuantity());
+            inventoryRepository.save(inventory);
+
+            // 4. Lưu Audit Log
+            auditLogRepository.save(InventoryAuditLog.builder()
+                    .productId(command.getProductId())
+                    .quantity(command.getQuantity())
+                    .type("RESERVE")
+                    .message("Giữ hàng cho đơn hàng: " + command.getOrderId())
+                    .build());
+
+            // 5. Đánh dấu đã xử lý (Idempotency)
+            processedEventRepository.save(ProcessedEvent.builder()
+                    .orderId(command.getOrderId())
+                    .eventType(ProcessedEvent.EventType.RESERVE)
+                    .productId(command.getProductId())
+                    .quantity(command.getQuantity())
+                    .build());
+
+            // 6. Gửi phản hồi THÀNH CÔNG về Orchestrator
+            InventoryResultPayload reply = InventoryResultPayload.builder()
+                    .orderId(command.getOrderId())
+                    .status("SUCCESS")
+                    .build();
+            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_REPLY_RESULT, reply);
+            log.info("[INVENTORY] Đã bắn phản hồi SUCCESS cho đơn hàng: {}", command.getOrderId());
+
+        } catch (Exception e) {
+            log.error("[INVENTORY] Lỗi xử lý RESERVE cho đơn hàng: {}: {}", command.getOrderId(), e.getMessage());
+            
+            // Gửi phản hồi THẤT BẠI về Orchestrator
+            InventoryResultPayload reply = InventoryResultPayload.builder()
+                    .orderId(command.getOrderId())
+                    .status("FAILURE")
+                    .message(e.getMessage())
+                    .build();
+            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_REPLY_RESULT, reply);
+        }
+    }
 
     /**
      * Task 3.9: Xử lý Confirm Order Command

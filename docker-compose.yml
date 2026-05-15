@@ -324,6 +324,35 @@ services:
     networks:
       - oms-network
 
+  orchestrator-service:
+    build:
+      context: ./backend
+      dockerfile: orchestrator-service/Dockerfile
+    container_name: oms-orchestrator
+    environment:
+      - SPRING_DEVTOOLS_RESTART_ENABLED=true
+      - SPRING_DEVTOOLS_RESTART_POLL_INTERVAL=2s
+      - SPRING_DEVTOOLS_RESTART_QUIET_PERIOD=1s
+      - SPRING_DEVTOOLS_RESTART_ADDITIONAL_PATHS=/app/target/classes,/common-library/target/classes
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://mariadb:3306/db_saga
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=user
+      - SPRING_RABBITMQ_PASSWORD=password
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      discovery-server:
+        condition: service_started
+    volumes:
+      - ./backend/orchestrator-service/target/classes:/app/target/classes
+      - ./backend/common-library/target/classes:/common-library/target/classes
+    networks:
+      - oms-network
+
 networks:
   oms-network:
     driver: bridge

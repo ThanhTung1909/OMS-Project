@@ -43,6 +43,7 @@ public class ProcessedEvent {
     private LocalDateTime processedAt;
 
     public enum EventType {
+        RESERVE,
         CONFIRM,
         ROLLBACK
     }

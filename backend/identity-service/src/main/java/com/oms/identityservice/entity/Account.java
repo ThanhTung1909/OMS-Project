@@ -34,6 +34,8 @@ public class Account {
     @Column(unique=true)
     private String email;
 
+    private String fullName;
+
     @Enumerated(EnumType.STRING)
     private Role role;
 

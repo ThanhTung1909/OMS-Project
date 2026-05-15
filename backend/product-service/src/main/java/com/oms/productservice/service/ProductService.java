@@ -1,6 +1,5 @@
 package com.oms.productservice.service;
 
-import com.oms.productservice.client.InventoryClient;
 import com.oms.productservice.dto.productDTO.ProductRequest;
 import com.oms.productservice.dto.productDTO.ProductResponse;
 import com.oms.productservice.entity.Category;
@@ -20,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import com.oms.common.constant.RedisConstants;
 
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +33,7 @@ import java.util.stream.Collectors;
 public class ProductService {
     private final ProductRepository productrepo;
     private final CategoryRepository categoryRepo;
-    private final InventoryClient inventoryClient;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     @Lazy
@@ -57,7 +58,25 @@ public class ProductService {
                 .build();
 
         try {
-            return mapToProductResponse(productrepo.save(product));
+            Product savedProduct = productrepo.save(product);
+            
+            // Đồng bộ Giá lên Redis (CQRS)
+            try {
+                String priceKey = RedisConstants.PREFIX_PRODUCT_PRICE + savedProduct.getId();
+                stringRedisTemplate.opsForValue().set(priceKey, savedProduct.getPrice().toString());
+                
+                String nameKey = RedisConstants.PREFIX_PRODUCT_NAME + savedProduct.getId();
+                stringRedisTemplate.opsForValue().set(nameKey, savedProduct.getName());
+
+                if (savedProduct.getImageUrl() != null && !savedProduct.getImageUrl().isEmpty()) {
+                    String imageKey = RedisConstants.PREFIX_PRODUCT_IMAGE + savedProduct.getId();
+                    stringRedisTemplate.opsForValue().set(imageKey, savedProduct.getImageUrl().get(0));
+                }
+            } catch (Exception e) {
+                log.error("Lỗi khi đồng bộ dữ liệu lên Redis cho sản phẩm {}: {}", savedProduct.getId(), e.getMessage());
+            }
+
+            return mapToProductResponse(savedProduct);
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw new AppException(ProductErrorCode.PRODUCT_SKU_ALREADY_EXISTS);
         }
@@ -110,7 +129,25 @@ public class ProductService {
         product.setImageUrl(request.getImageUrl());
         product.setCategory(category);
 
-        return mapToProductResponse(productrepo.save(product));
+        Product savedProduct = productrepo.save(product);
+
+        // Đồng bộ Giá lên Redis (CQRS)
+        try {
+            String priceKey = RedisConstants.PREFIX_PRODUCT_PRICE + savedProduct.getId();
+            stringRedisTemplate.opsForValue().set(priceKey, savedProduct.getPrice().toString());
+            
+            String nameKey = RedisConstants.PREFIX_PRODUCT_NAME + savedProduct.getId();
+            stringRedisTemplate.opsForValue().set(nameKey, savedProduct.getName());
+
+            if (savedProduct.getImageUrl() != null && !savedProduct.getImageUrl().isEmpty()) {
+                String imageKey = RedisConstants.PREFIX_PRODUCT_IMAGE + savedProduct.getId();
+                stringRedisTemplate.opsForValue().set(imageKey, savedProduct.getImageUrl().get(0));
+            }
+        } catch (Exception e) {
+            log.error("Lỗi khi đồng bộ dữ liệu lên Redis cho sản phẩm {}: {}", savedProduct.getId(), e.getMessage());
+        }
+
+        return mapToProductResponse(savedProduct);
     }
 
     @Transactional
@@ -138,24 +175,27 @@ public class ProductService {
     private void enrichStockQuantity(List<ProductResponse> products) {
         if (products == null || products.isEmpty()) return;
 
-        List<String> productIds = products.stream()
-                .map(ProductResponse::getId)
-                .collect(Collectors.toList());
-
-        Map<String, Integer> stockMap = Collections.emptyMap();
         try {
-            ApiResponse<Map<String, Integer>> response = inventoryClient.getBulkStock(productIds);
-            if (response != null && response.isSuccess() && response.getResult() != null) {
-                stockMap = response.getResult();
-            } else {
-                log.warn("Inventory Service trả về response không hợp lệ khi gọi bulk-stock");
-            }
-        } catch (Exception e) {
-            log.error("Không thể kết nối tới Inventory Service để lấy tồn kho: {}", e.getMessage());
-        }
+            // 1. Tạo list các Key cần tìm
+            List<String> redisKeys = products.stream()
+                    .map(p -> RedisConstants.PREFIX_INVENTORY_STOCK + p.getId())
+                    .collect(Collectors.toList());
 
-        // Gán stockQuantity cho từng product, fallback = 0 nếu không tìm thấy trong map
-        final Map<String, Integer> finalStockMap = stockMap;
-        products.forEach(p -> p.setStockQuantity(finalStockMap.getOrDefault(p.getId(), 0)));
+            // 2. Chọc 1 phát vào Redis lấy ra cả 1 mảng số lượng (High Performance)
+            List<String> stocks = stringRedisTemplate.opsForValue().multiGet(redisKeys);
+
+            // 3. Map ngược lại vào ProductResponse
+            if (stocks != null) {
+                for (int i = 0; i < products.size(); i++) {
+                    String stockStr = stocks.get(i);
+                    int stockQty = (stockStr != null) ? Integer.parseInt(stockStr) : 0;
+                    products.get(i).setStockQuantity(stockQty);
+                }
+            }
+            log.info("Đã enrich tồn kho cho {} sản phẩm từ Redis.", products.size());
+        } catch (Exception e) {
+            log.error("Lỗi khi lấy tồn kho từ Redis: {}. Fallback về 0.", e.getMessage());
+            products.forEach(p -> p.setStockQuantity(0));
+        }
     }
 }

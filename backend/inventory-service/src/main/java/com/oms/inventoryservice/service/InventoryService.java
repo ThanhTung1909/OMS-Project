@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import com.oms.common.constant.RedisConstants;
 
 import com.oms.common.AppException;
 import com.oms.inventoryservice.exception.InventoryErrorCode;
@@ -33,6 +35,9 @@ public class InventoryService {
 
     @Autowired
     private InventoryAuditLogRepository auditLogRepository;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     /**
      * Cập nhật số lượng tồn kho theo loại
@@ -133,6 +138,14 @@ public class InventoryService {
         // Lưu vào database
         Inventory updatedInventory = inventoryRepository.save(inventory);
         log.info("Inventory updated successfully for product: {}", request.getProductId());
+
+        // Cập nhật lên Redis (CQRS - Shared Redis)
+        try {
+            String redisKey = RedisConstants.PREFIX_INVENTORY_STOCK + updatedInventory.getProductId();
+            stringRedisTemplate.opsForValue().set(redisKey, String.valueOf(updatedInventory.getAvailableQuantity()));
+        } catch (Exception e) {
+            log.error("Lỗi khi cập nhật tồn kho lên Redis cho sản phẩm {}: {}", updatedInventory.getProductId(), e.getMessage());
+        }
 
         // Lưu Audit Log
         InventoryAuditLog auditLog = InventoryAuditLog.builder()

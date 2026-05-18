@@ -21,3 +21,9 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
+
+vnpay:
+  tmnCode: "WODXQXV2" 
+  hashSecret: "PLF6N2OKEJWLJ816DZENB2DXERLXBLDJ" 
+  url: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+  returnUrl: "http://localhost:3000/payment-result" 

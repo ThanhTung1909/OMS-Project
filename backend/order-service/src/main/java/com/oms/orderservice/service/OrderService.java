@@ -123,6 +123,7 @@ public class OrderService {
                 .receiverName(addrReq.getReceiverName())
                 .receiverPhone(addrReq.getReceiverPhone())
                 .address(fullAddress)
+                .paymentMethod(order.getPaymentMethod())
                 .items(eventItems)
                 .build();
 
@@ -229,12 +230,13 @@ public class OrderService {
         return OrderResponse.builder()
                 .orderId(order.getId())
                 .userId(order.getUserId())
-                .status(order.getStatus().name())
+                .status(order.getStatus() != null ? order.getStatus().name() : "UNKNOWN")
                 .message("Chi tiết đơn hàng #" + order.getId())
                 .totalAmount(order.getTotalAmount())
                 .paymentId(order.getPaymentId())
                 .deliveryId(order.getDeliveryId())
                 .paymentMethod(order.getPaymentMethod())
+                .paymentUrl(order.getPaymentUrl())
                 .errorMessage(order.getErrorMessage())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())

@@ -15,6 +15,7 @@ public class RabbitMQConstants {
     // Payment 
     public static final String PAYMENT_COMMAND_CREATE = "payment.command.create";
     public static final String PAYMENT_REPLY_RESULT = "payment.reply.result";
+    public static final String PAYMENT_REPLY_URL_CREATED = "payment.reply.url_created";
     
     // Inventory 
     public static final String INVENTORY_COMMAND_RESERVE = "inventory.command.reserve";

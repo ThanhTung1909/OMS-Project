@@ -22,6 +22,7 @@ public class OrderResponse {
     private String paymentId;
     private String deliveryId;
     private String paymentMethod;
+    private String paymentUrl;
     private String errorMessage;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

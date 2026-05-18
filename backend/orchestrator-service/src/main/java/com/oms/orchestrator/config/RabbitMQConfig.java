@@ -17,6 +17,7 @@ public class RabbitMQConfig {
     public static final String QUEUE_ORCHESTRATOR_INVENTORY_REPLY = "q.orchestrator.inventory.reply";
     public static final String QUEUE_ORCHESTRATOR_PAYMENT_REPLY = "q.orchestrator.payment.reply";
     public static final String QUEUE_ORCHESTRATOR_DELIVERY_REPLY = "q.orchestrator.delivery.reply";
+    public static final String QUEUE_ORCHESTRATOR_PAYMENT_URL = "q.orchestrator.payment.url";
 
     @Bean
     public TopicExchange omsExchange() {
@@ -39,6 +40,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue paymentUrlQueue() {
+        return new Queue(QUEUE_ORCHESTRATOR_PAYMENT_URL, true);
+    }
+
+    @Bean
     public Queue deliveryReplyQueue() {
         return new Queue(QUEUE_ORCHESTRATOR_DELIVERY_REPLY, true);
     }
@@ -56,6 +62,11 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingPaymentReply(Queue paymentReplyQueue, TopicExchange omsExchange) {
         return BindingBuilder.bind(paymentReplyQueue).to(omsExchange).with(RabbitMQConstants.PAYMENT_REPLY_RESULT);
+    }
+
+    @Bean
+    public Binding bindingPaymentUrl(Queue paymentUrlQueue, TopicExchange omsExchange) {
+        return BindingBuilder.bind(paymentUrlQueue).to(omsExchange).with(RabbitMQConstants.PAYMENT_REPLY_URL_CREATED);
     }
 
     @Bean

@@ -19,6 +19,7 @@ public class OrderCreatedEvent {
     private String receiverName;
     private String receiverPhone;
     private String address;
+    private String paymentMethod;
     private List<OrderItem> items;
 
     @Data

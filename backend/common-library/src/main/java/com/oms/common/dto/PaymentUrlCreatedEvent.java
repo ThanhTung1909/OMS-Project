@@ -1,6 +1,5 @@
 package com.oms.common.dto;
 
-import com.oms.common.enums.OrderStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,11 +9,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderStatusUpdateCommand {
+public class PaymentUrlCreatedEvent {
     private String orderId;
-    private OrderStatus newStatus;
-    private String message;
-    private String paymentId;
+    private String transactionId;
     private String paymentUrl;
-    private String errorMessage;
 }

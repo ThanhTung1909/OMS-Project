@@ -38,11 +38,17 @@ public class OrderCommandHandler {
         }
 
         // Cập nhật trạng thái và các thông tin liên quan
-        order.setStatus(command.getNewStatus());
+        if (command.getNewStatus() != null) {
+            order.setStatus(command.getNewStatus());
+        }
         order.setUpdatedAt(LocalDateTime.now());
         
         if (command.getPaymentId() != null) {
             order.setPaymentId(command.getPaymentId());
+        }
+
+        if (command.getPaymentUrl() != null) {
+            order.setPaymentUrl(command.getPaymentUrl());
         }
 
         if (command.getErrorMessage() != null) {

@@ -12,7 +12,8 @@ public class RouterValidator {
 
     public static final List<String> openApiEnpoints = List.of(
             "/api/v1/auth/register",
-            "/api/v1/auth/login"
+            "/api/v1/auth/login",
+            "/api/v1/payments/vnpay-ipn"
             
     );
 

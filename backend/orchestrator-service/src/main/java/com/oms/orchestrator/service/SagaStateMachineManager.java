@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import com.oms.common.dto.PaymentUrlCreatedEvent;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +28,7 @@ public class SagaStateMachineManager {
     private final SagaInstanceRepository sagaInstanceRepository;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
+
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_ORCHESTRATOR_ORDER_CREATED)
     @Transactional
@@ -88,29 +90,41 @@ public class SagaStateMachineManager {
         }
 
         if ("SUCCESS".equalsIgnoreCase(payload.getStatus())) {
-            log.info("[ORCHESTRATOR] Giữ hàng THÀNH CÔNG cho đơn hàng: {}. Tiếp tục sang bước THANH TOÁN.", payload.getOrderId());
-            saga.setCurrentStep(SagaStatus.INVENTORY_RESERVED);
-            sagaInstanceRepository.save(saga);
-
-            // Bước 2: Tạo yêu cầu thanh toán (Create Payment)
+            log.info("[ORCHESTRATOR] Giữ hàng THÀNH CÔNG cho đơn hàng: {}.", payload.getOrderId());
+            
             try {
                 OrderCreatedEvent originalEvent = objectMapper.readValue(saga.getPayload(), OrderCreatedEvent.class);
-                PaymentCommand paymentCmd = PaymentCommand.builder()
-                        .orderId(saga.getOrderId())
-                        .userId(originalEvent.getUserId())
-                        .amount(originalEvent.getTotalAmount())
-                        .description("Thanh toán đơn hàng: " + saga.getOrderId())
-                        .build();
+                String paymentMethod = originalEvent.getPaymentMethod();
 
-                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.PAYMENT_COMMAND_CREATE, paymentCmd);
-                        log.info("[ORCHESTRATOR] Đã gửi lệnh thanh toán cho đơn hàng: {}", saga.getOrderId());
-                    }
-                });
+                if ("COD".equalsIgnoreCase(paymentMethod)) {
+                    log.info("[ORCHESTRATOR] Đơn hàng {} thanh toán COD. Bỏ qua bước Thanh toán, tiến hành Hoàn tất.", saga.getOrderId());
+                    saga.setCurrentStep(SagaStatus.PAYMENT_PROCESSED);
+                    sagaInstanceRepository.save(saga);
+                    
+                    // Kích hoạt luồng hoàn tất (Confirm Inventory, Delivery, etc.)
+                    triggerSagaCompletion(saga, originalEvent, "COD_CONFIRMATION");
+                } else {
+                    log.info("[ORCHESTRATOR] Đơn hàng {} thanh toán VNPAY. Gửi lệnh khởi tạo thanh toán.", saga.getOrderId());
+                    saga.setCurrentStep(SagaStatus.INVENTORY_RESERVED);
+                    sagaInstanceRepository.save(saga);
+
+                    PaymentCommand paymentCmd = PaymentCommand.builder()
+                            .orderId(saga.getOrderId())
+                            .userId(originalEvent.getUserId())
+                            .amount(originalEvent.getTotalAmount())
+                            .description("Thanh toán đơn hàng: " + saga.getOrderId())
+                            .build();
+
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.PAYMENT_COMMAND_CREATE, paymentCmd);
+                            log.info("[ORCHESTRATOR] Đã gửi lệnh thanh toán cho đơn hàng: {}", saga.getOrderId());
+                        }
+                    });
+                }
             } catch (JsonProcessingException e) {
-                log.error("[ORCHESTRATOR] Lỗi khi đọc dữ liệu payload gốc", e);
+                log.error("[ORCHESTRATOR] Lỗi khi xử lý payload Saga cho đơn hàng: {}", saga.getOrderId(), e);
             }
         } else {
             log.error("[ORCHESTRATOR] Giữ hàng THẤT BẠI cho đơn hàng: {}. Tiến hành hủy đơn.", payload.getOrderId());
@@ -144,8 +158,8 @@ public class SagaStateMachineManager {
 
         if (saga == null) return;
 
-        // Kiểm tra Idempotency
-        if (saga.getCurrentStep() != SagaStatus.INVENTORY_RESERVED) {
+        // Chấp nhận bước INVENTORY_RESERVED (VNPAY vừa gửi URL xong) hoặc WAITING_FOR_PAYMENT
+        if (saga.getCurrentStep() != SagaStatus.INVENTORY_RESERVED && saga.getCurrentStep() != SagaStatus.WAITING_FOR_PAYMENT) {
             log.warn("[ORCHESTRATOR] Đơn hàng {} đang ở bước {}. Bỏ qua phản hồi Thanh toán.", 
                     saga.getOrderId(), saga.getCurrentStep());
             return;
@@ -158,52 +172,10 @@ public class SagaStateMachineManager {
 
             try {
                 OrderCreatedEvent originalEvent = objectMapper.readValue(saga.getPayload(), OrderCreatedEvent.class);
-                
-                // Bước 3a: Chốt kho (Confirm Inventory)
-                List<InventoryCommand> inventoryCommands = originalEvent.getItems().stream()
-                        .map(item -> InventoryCommand.builder()
-                                .orderId(saga.getOrderId())
-                                .productId(item.getProductId())
-                                .quantity(item.getQuantity())
-                                .type("CONFIRM")
-                                .build())
-                        .toList();
-
-                // Bước 3b: Tạo vận đơn giao hàng (Create Delivery)
-                DeliveryCommand deliveryCmd = DeliveryCommand.builder()
-                        .orderId(saga.getOrderId())
-                        .receiverName(originalEvent.getReceiverName())
-                        .receiverPhone(originalEvent.getReceiverPhone())
-                        .address(originalEvent.getAddress())
-                        .codAmount(java.math.BigDecimal.ZERO)
-                        .build();
-
-                // Cập nhật trạng thái đơn hàng sang CONFIRMED
-                OrderStatusUpdateCommand updateCmd = OrderStatusUpdateCommand.builder()
-                        .orderId(saga.getOrderId())
-                        .newStatus(OrderStatus.CONFIRMED)
-                        .paymentId(payload.getTransactionId())
-                        .message("Thanh toán thành công.")
-                        .build();
-
-                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        inventoryCommands.forEach(cmd -> 
-                            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_CONFIRM, cmd));
-                        
-                        rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_COMMAND_CREATE, deliveryCmd);
-                        
-                        rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
-                        
-                        log.info("[ORCHESTRATOR] Đã gửi các lệnh hoàn tất (Confirm, Delivery, OrderUpdate) cho đơn hàng: {}", saga.getOrderId());
-                    }
-                });
-
+                triggerSagaCompletion(saga, originalEvent, payload.getTransactionId());
             } catch (JsonProcessingException e) {
                 log.error("[ORCHESTRATOR] Lỗi khi giải mã dữ liệu payload", e);
             }
-
         } else {
             log.error("[ORCHESTRATOR] Thanh toán THẤT BẠI cho đơn hàng: {}. Tiến hành HOÀN KHO.", payload.getOrderId());
             saga.setCurrentStep(SagaStatus.ROLLED_BACK);
@@ -247,6 +219,83 @@ public class SagaStateMachineManager {
                 log.error("[ORCHESTRATOR] Lỗi khi giải mã dữ liệu payload", e);
             }
         }
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_ORCHESTRATOR_PAYMENT_URL)
+    @Transactional
+    public void handlePaymentUrlCreated(PaymentUrlCreatedEvent event) {
+        log.info("[ORCHESTRATOR] Nhận URL thanh toán cho đơn hàng: {}", event.getOrderId());
+
+        SagaInstance saga = sagaInstanceRepository.findByOrderId(event.getOrderId())
+                .orElse(null);
+
+        if (saga == null) return;
+
+        // Chuyển trạng thái sang chờ thanh toán
+        saga.setCurrentStep(SagaStatus.WAITING_FOR_PAYMENT);
+        sagaInstanceRepository.save(saga);
+
+        // Gửi lệnh cập nhật URL về cho Order Service
+        OrderStatusUpdateCommand updateCmd = OrderStatusUpdateCommand.builder()
+                .orderId(saga.getOrderId())
+                .newStatus(OrderStatus.PAYMENT_PENDING)
+                .paymentUrl(event.getPaymentUrl())
+                .message("Đã tạo URL thanh toán VNPay.")
+                .build();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
+                log.info("[ORCHESTRATOR] Đã gửi lệnh cập nhật paymentUrl sang Order Service cho đơn hàng: {}", saga.getOrderId());
+            }
+        });
+    }
+
+    /**
+     * Helper logic to trigger inventory confirmation and delivery creation
+     */
+    private void triggerSagaCompletion(SagaInstance saga, OrderCreatedEvent originalEvent, String transactionId) {
+        // Bước 3a: Chốt kho (Confirm Inventory)
+        List<InventoryCommand> inventoryCommands = originalEvent.getItems().stream()
+                .map(item -> InventoryCommand.builder()
+                        .orderId(saga.getOrderId())
+                        .productId(item.getProductId())
+                        .quantity(item.getQuantity())
+                        .type("CONFIRM")
+                        .build())
+                .toList();
+
+        // Bước 3b: Tạo vận đơn giao hàng (Create Delivery)
+        DeliveryCommand deliveryCmd = DeliveryCommand.builder()
+                .orderId(saga.getOrderId())
+                .receiverName(originalEvent.getReceiverName())
+                .receiverPhone(originalEvent.getReceiverPhone())
+                .address(originalEvent.getAddress())
+                .codAmount("COD".equalsIgnoreCase(originalEvent.getPaymentMethod()) ? originalEvent.getTotalAmount() : java.math.BigDecimal.ZERO)
+                .build();
+
+        // Cập nhật trạng thái đơn hàng sang CONFIRMED
+        OrderStatusUpdateCommand updateCmd = OrderStatusUpdateCommand.builder()
+                .orderId(saga.getOrderId())
+                .newStatus(OrderStatus.CONFIRMED)
+                .paymentId(transactionId)
+                .message("Đơn hàng đã được xác nhận.")
+                .build();
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                inventoryCommands.forEach(cmd -> 
+                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_CONFIRM, cmd));
+                
+                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_COMMAND_CREATE, deliveryCmd);
+                
+                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
+                
+                log.info("[ORCHESTRATOR] Đã kích hoạt luồng hoàn tất Saga cho đơn hàng: {}", saga.getOrderId());
+            }
+        });
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_ORCHESTRATOR_DELIVERY_REPLY)

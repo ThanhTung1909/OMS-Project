@@ -24,6 +24,7 @@ public class SecurityConfig {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/v1/payments/vnpay-ipn").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(internalAuthFilter, UsernamePasswordAuthenticationFilter.class);

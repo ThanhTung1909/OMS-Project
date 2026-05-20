@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 public class AddressRequest {
     private String street;
     private String ward;
-    private String district;
     private String city;
     private boolean isDefault;
 }

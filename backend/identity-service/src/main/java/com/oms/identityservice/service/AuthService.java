@@ -23,6 +23,10 @@ import com.oms.identityservice.entity.Enum.OutboxStatus;
 import com.oms.common.constant.RabbitMQConstants;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +38,7 @@ public class AuthService {
     private final JwtUtil jwt;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+    private final StringRedisTemplate redisTemplate;
 
     @Transactional
     public AuthResponse register(RegisterRequest r){
@@ -123,4 +128,108 @@ public class AuthService {
         return res;
     }
 
+    @Transactional
+    public void forgotPassword(com.oms.identityservice.dto.ForgotPasswordRequest request) {
+        String identifier = request.getUsernameOrEmail();
+        
+        Account acc = accountRepository.findByEmail(identifier)
+                .orElseGet(() -> accountRepository.findByUsername(identifier).orElse(null));
+
+        if (acc == null || acc.getStatus() != AccountStatus.ACTIVE) {
+            throw new AppException(IdentityErrorCode.USER_NOT_FOUND);
+        }
+
+        String otp = String.format("%06d", new Random().nextInt(999999));
+
+        String redisKey = "OTP_FORGOT_PASSWORD:" + acc.getEmail();
+        redisTemplate.opsForValue().set(redisKey, otp, 15, TimeUnit.MINUTES);
+
+        try {
+            com.oms.identityservice.dto.ForgotPasswordRequestedEvent event = com.oms.identityservice.dto.ForgotPasswordRequestedEvent.builder()
+                    .email(acc.getEmail())
+                    .username(acc.getUsername())
+                    .otp(otp)
+                    .message("Yêu cầu lấy lại mật khẩu. Mã OTP của bạn là: " + otp)
+                    .build();
+
+            String payload = objectMapper.writeValueAsString(event);
+            
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .aggregateId(acc.getId())
+                    .type(RabbitMQConstants.IDENTITY_FORGOT_PASSWORD_REQUESTED)
+                    .payload(payload)
+                    .status(OutboxStatus.PENDING)
+                    .build();
+                    
+            outboxEventRepository.save(outboxEvent);
+            log.info("Saved ForgotPasswordRequestedEvent to Outbox for email: {}", acc.getEmail());
+        } catch (Exception e) {
+           log.error("Failed to serialize and save outbox event for forgot password: {}", e.getMessage());
+           throw new AppException(IdentityErrorCode.UNCATEGORIZED_EXCEPTION);
+        }
+    }
+
+    public void verifyOtp(com.oms.identityservice.dto.VerifyOtpRequest request) {
+        String identifier = request.getUsernameOrEmail();
+        
+        Account acc = accountRepository.findByEmail(identifier)
+                .orElseGet(() -> accountRepository.findByUsername(identifier).orElse(null));
+
+        if (acc == null || acc.getStatus() != AccountStatus.ACTIVE) {
+            throw new AppException(IdentityErrorCode.USER_NOT_FOUND);
+        }
+
+        String redisKey = "OTP_FORGOT_PASSWORD:" + acc.getEmail();
+        String storedOtp = redisTemplate.opsForValue().get(redisKey);
+
+        if (storedOtp == null || !storedOtp.equals(request.getOtp())) {
+            throw new AppException(IdentityErrorCode.INVALID_CREDENTIALS); 
+        }
+    }
+
+    @Transactional
+    public void resetPassword(com.oms.identityservice.dto.ResetPasswordRequest request) {
+        String identifier = request.getUsernameOrEmail();
+        
+        Account acc = accountRepository.findByEmail(identifier)
+                .orElseGet(() -> accountRepository.findByUsername(identifier).orElse(null));
+
+        if (acc == null || acc.getStatus() != AccountStatus.ACTIVE) {
+            throw new AppException(IdentityErrorCode.USER_NOT_FOUND);
+        }
+
+        String redisKey = "OTP_FORGOT_PASSWORD:" + acc.getEmail();
+        String storedOtp = redisTemplate.opsForValue().get(redisKey);
+
+        if (storedOtp == null || !storedOtp.equals(request.getOtp())) {
+            throw new AppException(IdentityErrorCode.INVALID_CREDENTIALS); 
+        }
+
+        acc.setPasswordHash(encoder.encode(request.getNewPassword()));
+        accountRepository.save(acc);
+
+        // Delete OTP from Redis
+        redisTemplate.delete(redisKey);
+        
+        log.info("Password successfully reset for account: {}", acc.getEmail());
+    }
+
+    @Transactional
+    public void changePassword(String accountId, com.oms.identityservice.dto.ChangePasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
+            throw new AppException(IdentityErrorCode.INVALID_PASSWORD); // Or a specific error code for password mismatch
+        }
+
+        Account acc = accountRepository.findById(accountId)
+                .orElseThrow(() -> new AppException(IdentityErrorCode.USER_NOT_FOUND));
+
+        if (!encoder.matches(request.getOldPassword(), acc.getPasswordHash())) {
+            throw new AppException(IdentityErrorCode.INVALID_CREDENTIALS); // Or a specific error code for wrong old password
+        }
+
+        acc.setPasswordHash(encoder.encode(request.getNewPassword()));
+        accountRepository.save(acc);
+
+        log.info("Password successfully changed for account ID: {}", accountId);
+    }
 }

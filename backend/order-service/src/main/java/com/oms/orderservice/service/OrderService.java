@@ -112,7 +112,7 @@ public class OrderService {
 
         // Chỉ bắn duy nhất 1 event OrderCreatedEvent để Orchestrator xử lý tiếp
         String fullAddress = java.util.stream.Stream.of(
-                        addrReq.getStreet(), addrReq.getWard(), addrReq.getDistrict(), addrReq.getCity())
+                        addrReq.getStreet(), addrReq.getWard(), addrReq.getCity())
                 .filter(s -> s != null && !s.isEmpty())
                 .collect(java.util.stream.Collectors.joining(", "));
 
@@ -160,7 +160,7 @@ public class OrderService {
         try {
             OrderAddress addr = order.getShippingAddress();
             String fullAddress = java.util.stream.Stream.of(
-                    addr.getStreet(), addr.getWard(), addr.getDistrict(), addr.getCity())
+                    addr.getStreet(), addr.getWard(), addr.getCity())
                     .filter(s -> s != null && !s.isEmpty())
                     .collect(java.util.stream.Collectors.joining(", "));
 

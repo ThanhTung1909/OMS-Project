@@ -26,9 +26,6 @@ public class CustomerAddress {
     private String ward;
 
     @Column(nullable = false)
-    private String district;
-
-    @Column(nullable = false)
     private String city;
 
     @Column(name = "is_default")

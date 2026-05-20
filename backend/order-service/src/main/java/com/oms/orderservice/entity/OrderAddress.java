@@ -14,7 +14,6 @@ import lombok.Setter;
 public class OrderAddress {
     private String street;
     private String ward;
-    private String district;
     private String city;
     private String receiverName;
     private String receiverPhone;

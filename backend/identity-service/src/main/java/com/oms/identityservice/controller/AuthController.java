@@ -48,4 +48,56 @@ public class AuthController {
         );
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<String>> forgotPassword(@Valid @RequestBody com.oms.identityservice.dto.ForgotPasswordRequest r) {
+        authService.forgotPassword(r);
+        return ResponseEntity.ok(
+            ApiResponse.<String>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Mã OTP đã được gửi đến email của bạn")
+                .result("Success")
+                .build()
+        );
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<String>> verifyOtp(@Valid @RequestBody com.oms.identityservice.dto.VerifyOtpRequest r) {
+        authService.verifyOtp(r);
+        return ResponseEntity.ok(
+            ApiResponse.<String>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Mã OTP hợp lệ")
+                .result("Success")
+                .build()
+        );
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody com.oms.identityservice.dto.ResetPasswordRequest r) {
+        authService.resetPassword(r);
+        return ResponseEntity.ok(
+            ApiResponse.<String>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Đặt lại mật khẩu thành công")
+                .result("Success")
+                .build()
+        );
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<String>> changePassword(@Valid @RequestBody com.oms.identityservice.dto.ChangePasswordRequest r) {
+        String accountId = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        authService.changePassword(accountId, r);
+        return ResponseEntity.ok(
+            ApiResponse.<String>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Đổi mật khẩu thành công")
+                .result("Success")
+                .build()
+        );
+    }
 }

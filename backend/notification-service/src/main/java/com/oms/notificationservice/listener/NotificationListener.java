@@ -144,4 +144,24 @@ public class NotificationListener {
             throw e;
         }
     }
+
+    /**
+     * Lắng nghe sự kiện yêu cầu lấy lại mật khẩu từ Identity Service
+     */
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_NOTIFICATION_FORGOT_PASSWORD)
+    public void handleForgotPasswordRequested(com.oms.notificationservice.dto.ForgotPasswordRequestedEvent event) {
+        log.info("Nhận sự kiện yêu cầu lấy lại mật khẩu cho email: {}", event.getEmail());
+
+        String subject = "Khôi phục mật khẩu tài khoản OMS";
+        String body = String.format("Chào %s,\n\nBạn đã yêu cầu khôi phục mật khẩu.\n%s\n\nMã OTP này sẽ hết hạn sau 15 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.\n\nTrân trọng,\nĐội ngũ OMS", 
+                event.getUsername() != null ? event.getUsername() : "bạn", 
+                event.getMessage());
+
+        try {
+            emailService.sendEmail(event.getEmail(), subject, body);
+            log.info("Đã gửi email khôi phục mật khẩu tới {}", event.getEmail());
+        } catch (Exception e) {
+            log.error("Lỗi khi gửi email khôi phục mật khẩu: {}", e.getMessage());
+        }
+    }
 }

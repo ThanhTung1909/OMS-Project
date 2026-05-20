@@ -43,7 +43,6 @@ public class CustomerService {
                 .map(addr -> AddressResponse.builder()
                         .street(addr.getStreet())
                         .ward(addr.getWard())
-                        .district(addr.getDistrict())
                         .city(addr.getCity())
                         .isDefault(addr.isDefault())
                         .build())
@@ -78,7 +77,6 @@ public class CustomerService {
         CustomerAddress address = new CustomerAddress();
         address.setStreet(request.getStreet());
         address.setWard(request.getWard());
-        address.setDistrict(request.getDistrict());
         address.setCity(request.getCity());
         address.setDefault(request.isDefault());
         address.setCustomer(customer);

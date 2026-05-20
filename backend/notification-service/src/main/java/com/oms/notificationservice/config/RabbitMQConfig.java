@@ -29,6 +29,7 @@ public class RabbitMQConfig {
     public static final String QUEUE_NOTIFICATION_ACCOUNT_CREATE = "q.notification.account.create";
     public static final String QUEUE_NOTIFICATION_ORDER_STATUS = "q.notification.order.status";
     public static final String QUEUE_NOTIFICATION_DELIVERY_STATUS = "q.notification.delivery.status";
+    public static final String QUEUE_NOTIFICATION_FORGOT_PASSWORD = "q.notification.forgot.password";
 
     @Bean
     public TopicExchange omsExchange() {
@@ -51,6 +52,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue notificationForgotPasswordQueue() {
+        return new Queue(QUEUE_NOTIFICATION_FORGOT_PASSWORD, true);
+    }
+
+    @Bean
     public Binding bindingNotificationAccountCreate(Queue notificationAccountCreateQueue, TopicExchange omsExchange) {
         return BindingBuilder.bind(notificationAccountCreateQueue)
                 .to(omsExchange)
@@ -69,6 +75,13 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(notificationDeliveryStatusQueue)
                 .to(omsExchange)
                 .with(RabbitMQConstants.DELIVERY_STATUS_UPDATE);
+    }
+
+    @Bean
+    public Binding bindingNotificationForgotPassword(Queue notificationForgotPasswordQueue, TopicExchange omsExchange) {
+        return BindingBuilder.bind(notificationForgotPasswordQueue)
+                .to(omsExchange)
+                .with(RabbitMQConstants.IDENTITY_FORGOT_PASSWORD_REQUESTED);
     }
 
     @Bean

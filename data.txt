@@ -1,72 +1,102 @@
+-- =====================================================================================
+-- DATABASE: db_product
+-- =====================================================================================
 USE db_product;
 
+-- --------------------------------------------------------
+-- 1. BẢNG DANH MỤC (CATEGORY)
+-- --------------------------------------------------------
 INSERT INTO category (category_id, name) VALUES 
-('f0000000-0000-0000-0000-000000000001', 'Men'),
-('f0000000-0000-0000-0000-000000000002', 'Women'),
-('f0000000-0000-0000-0000-000000000003', 'Kids');
+('f0000000-0000-0000-0000-000000000001', 'Thời trang Nam'),
+('f0000000-0000-0000-0000-000000000002', 'Thời trang Nữ'),
+('f0000000-0000-0000-0000-000000000003', 'Thời trang Trẻ em'),
+('f0000000-0000-0000-0000-000000000004', 'Tai nghe'),
+('f0000000-0000-0000-0000-000000000005', 'Điện thoại'),
+('f0000000-0000-0000-0000-000000000006', 'Phụ kiện'),
+('f0000000-0000-0000-0000-000000000007', 'Máy ảnh'),
+('f0000000-0000-0000-0000-000000000008', 'Máy tính xách tay');
 
+-- --------------------------------------------------------
+-- 2. BẢNG SẢN PHẨM (PRODUCT)
+-- --------------------------------------------------------
 INSERT INTO product (id, name, description, price, sku, category_id, created_at, updated_at) VALUES 
-('6683d3d4-7f77-9795-ecfa-98a300000000', 'Men Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 80.00, 'SKU-MEN-001', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d541-7f77-9795-ecfa-98b300000000', 'Men Tapered Fit Flat-Front Trousers', 'A lightweight, usually knitted, pullover shirt...', 72.00, 'SKU-MEN-002', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d809-7f77-9795-ecfa-98d900000000', 'Women Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 36.00, 'SKU-WOM-001', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d493-7f77-9795-ecfa-98a900000000', 'Women Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 30.00, 'SKU-WOM-002', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d4d9-7f77-9795-ecfa-98ad00000000', 'Men Tapered Fit Flat-Front Trousers', 'A lightweight, usually knitted, pullover shirt...', 70.00, 'SKU-MEN-003', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683da5f-7f77-9795-ecfa-98f900000000', 'Men Slim Fit Relaxed Denim Jacket', 'A lightweight, usually knitted, pullover shirt...', 86.00, 'SKU-MEN-004', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683dac4-7f77-9795-ecfa-990100000000', 'Kid Tapered Slim Fit Trouser', 'A lightweight, usually knitted, pullover shirt...', 56.00, 'SKU-KID-001', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d71c-7f77-9795-ecfa-98cd00000000', 'Boy Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 26.00, 'SKU-KID-002', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d984-7f77-9795-ecfa-98ef00000000', 'Men Slim Fit Relaxed Denim Jacket', 'A lightweight, usually knitted, pullover shirt...', 77.00, 'SKU-MEN-005', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d9d0-7f77-9795-ecfa-98f300000000', 'Boy Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 25.00, 'SKU-KID-003', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d521-7f77-9795-ecfa-98b100000000', 'Girls Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 64.00, 'SKU-KID-004', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d6a5-7f77-9795-ecfa-98c700000000', 'Women Palazzo Pants with Waist Belt', 'A lightweight, usually knitted, pullover shirt...', 52.00, 'SKU-WOM-003', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d9b2-7f77-9795-ecfa-98f100000000', 'Men Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 54.00, 'SKU-MEN-006', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d773-7f77-9795-ecfa-98d100000000', 'Girls Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 60.00, 'SKU-KID-005', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d688-7f77-9795-ecfa-98c500000000', 'Boy Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 36.00, 'SKU-KID-006', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d82b-7f77-9795-ecfa-98db00000000', 'Girls Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 42.00, 'SKU-KID-007', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d564-7f77-9795-ecfa-98b500000000', 'Men Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 46.00, 'SKU-MEN-007', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d89d-7f77-9795-ecfa-98e100000000', 'Girls Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 48.00, 'SKU-KID-008', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683da14-7f77-9795-ecfa-98f700000000', 'Women Zip-Front Relaxed Fit Jacket', 'A lightweight, usually knitted, pullover shirt...', 78.00, 'SKU-WOM-004', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d91f-7f77-9795-ecfa-98eb00000000', 'Men Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 48.00, 'SKU-MEN-008', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683db0d-7f77-9795-ecfa-990700000000', 'Men Slim Fit Relaxed Denim Jacket', 'A lightweight, usually knitted, pullover shirt...', 84.00, 'SKU-MEN-009', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d42b-7f77-9795-ecfa-98a500000000', 'Girls Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 50.00, 'SKU-KID-009', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d6dc-7f77-9795-ecfa-98cb00000000', 'Women Palazzo Pants with Waist Belt', 'A lightweight, usually knitted, pullover shirt...', 67.00, 'SKU-WOM-005', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d598-7f77-9795-ecfa-98b900000000', 'Women Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 45.00, 'SKU-WOM-006', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d605-7f77-9795-ecfa-98bf00000000', 'Girls Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 40.00, 'SKU-KID-010', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d846-7f77-9795-ecfa-98dd00000000', 'Men Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 34.00, 'SKU-MEN-010', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d90a-7f77-9795-ecfa-98e900000000', 'Women Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 42.00, 'SKU-WOM-007', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d9fa-7f77-9795-ecfa-98f500000000', 'Kid Tapered Slim Fit Trouser', 'A lightweight, usually knitted, pullover shirt...', 60.00, 'SKU-KID-011', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683daa2-7f77-9795-ecfa-98ff00000000', 'Men Slim Fit Relaxed Denim Jacket', 'A lightweight, usually knitted, pullover shirt...', 80.00, 'SKU-MEN-011', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d8b3-7f77-9795-ecfa-98e300000000', 'Women Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 38.00, 'SKU-WOM-008', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d654-7f77-9795-ecfa-98c300000000', 'Boy Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 28.00, 'SKU-KID-012', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d4f4-7f77-9795-ecfa-98af00000000', 'Men Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 68.00, 'SKU-MEN-012', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d57d-7f77-9795-ecfa-98b700000000', 'Men Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 26.00, 'SKU-MEN-013', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d638-7f77-9795-ecfa-98c100000000', 'Men Tapered Fit Flat-Front Trousers', 'A lightweight, usually knitted, pullover shirt...', 63.00, 'SKU-MEN-014', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d6c4-7f77-9795-ecfa-98c900000000', 'Women Zip-Front Relaxed Fit Jacket', 'A lightweight, usually knitted, pullover shirt...', 82.00, 'SKU-WOM-009', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683da71-7f77-9795-ecfa-98fb00000000', 'Men Slim Fit Relaxed Denim Jacket', 'A lightweight, usually knitted, pullover shirt...', 72.00, 'SKU-MEN-015', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d7b5-7f77-9795-ecfa-98d500000000', 'Girls Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 38.00, 'SKU-KID-013', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d394-7f77-9795-ecfa-98a100000000', 'Women Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 40.00, 'SKU-WOM-010', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d458-7f77-9795-ecfa-98a700000000', 'Men Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 26.00, 'SKU-MEN-016', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d756-7f77-9795-ecfa-98cf00000000', 'Boy Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 30.00, 'SKU-KID-014', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d79e-7f77-9795-ecfa-98d300000000', 'Women Zip-Front Relaxed Fit Jacket', 'A lightweight, usually knitted, pullover shirt...', 82.00, 'SKU-WOM-011', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d7d5-7f77-9795-ecfa-98d700000000', 'Men Slim Fit Relaxed Denim Jacket', 'A lightweight, usually knitted, pullover shirt...', 79.00, 'SKU-MEN-017', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d8f2-7f77-9795-ecfa-98e700000000', 'Women Zip-Front Relaxed Fit Jacket', 'A lightweight, usually knitted, pullover shirt...', 78.00, 'SKU-WOM-012', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d94e-7f77-9795-ecfa-98ed00000000', 'Men Printed Plain Cotton Shirt', 'A lightweight, usually knitted, pullover shirt...', 52.00, 'SKU-MEN-018', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683dadf-7f77-9795-ecfa-990300000000', 'Kid Tapered Slim Fit Trouser', 'A lightweight, usually knitted, pullover shirt...', 40.00, 'SKU-KID-015', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683daf6-7f77-9795-ecfa-990500000000', 'Women Zip-Front Relaxed Fit Jacket', 'A lightweight, usually knitted, pullover shirt...', 68.00, 'SKU-WOM-013', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d4b2-7f77-9795-ecfa-98ab00000000', 'Girls Round Neck Cotton Top', 'A lightweight, usually knitted, pullover shirt...', 56.00, 'SKU-KID-016', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d5e0-7f77-9795-ecfa-98bd00000000', 'Men Tapered Fit Flat-Front Trousers', 'A lightweight, usually knitted, pullover shirt...', 58.00, 'SKU-MEN-019', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d8d1-7f77-9795-ecfa-98e500000000', 'Women Zip-Front Relaxed Fit Jacket', 'A lightweight, usually knitted, pullover shirt...', 74.00, 'SKU-WOM-014', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d5b6-7f77-9795-ecfa-98bb00000000', 'Boy Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 60.00, 'SKU-KID-017', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d889-7f77-9795-ecfa-98df00000000', 'Men Round Neck Pure Cotton T-shirt', 'A lightweight, usually knitted, pullover shirt...', 64.00, 'SKU-MEN-020', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683da88-7f77-9795-ecfa-98fd00000000', 'Kid Tapered Slim Fit Trouser', 'A lightweight, usually knitted, pullover shirt...', 38.00, 'SKU-KID-018', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW());
+-- ===== THỜI TRANG =====
+('6683d3d4-7f77-9795-ecfa-98a300000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 2000000.00, 'SKU-MEN-001', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d541-7f77-9795-ecfa-98b300000000', 'Quần âu nam xếp ly mờ dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái và thanh lịch.', 1800000.00, 'SKU-MEN-002', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d809-7f77-9795-ecfa-98d900000000', 'Áo thun nữ cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 900000.00, 'SKU-WOM-001', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d493-7f77-9795-ecfa-98a900000000', 'Áo thun nữ cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 750000.00, 'SKU-WOM-002', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d4d9-7f77-9795-ecfa-98ad00000000', 'Quần âu nam xếp ly mờ dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái và thanh lịch.', 1750000.00, 'SKU-MEN-003', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683da5f-7f77-9795-ecfa-98f900000000', 'Áo khoác bò nam dáng ôm vừa', 'Chất liệu bò mềm mại, thiết kế trẻ trung thích hợp mặc khoác ngoài hàng ngày.', 2150000.00, 'SKU-MEN-004', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683dac4-7f77-9795-ecfa-990100000000', 'Quần dài trẻ em dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái cho bé.', 1400000.00, 'SKU-KID-001', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d71c-7f77-9795-ecfa-98cd00000000', 'Áo thun bé trai cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 650000.00, 'SKU-KID-002', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d984-7f77-9795-ecfa-98ef00000000', 'Áo khoác bò nam dáng ôm vừa', 'Chất liệu bò mềm mại, thiết kế trẻ trung thích hợp mặc khoác ngoài hàng ngày.', 1925000.00, 'SKU-MEN-005', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d9d0-7f77-9795-ecfa-98f300000000', 'Áo thun bé trai cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 625000.00, 'SKU-KID-003', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d521-7f77-9795-ecfa-98b100000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1600000.00, 'SKU-KID-004', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d6a5-7f77-9795-ecfa-98c700000000', 'Quần ống rộng nữ kèm thắt lưng', 'Thiết kế mỏng nhẹ, thoáng mát, giúp tôn dáng và cực kỳ thời trang.', 1300000.00, 'SKU-WOM-003', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d9b2-7f77-9795-ecfa-98f100000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1350000.00, 'SKU-MEN-006', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d773-7f77-9795-ecfa-98d100000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1500000.00, 'SKU-KID-005', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d688-7f77-9795-ecfa-98c500000000', 'Áo thun bé trai cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 900000.00, 'SKU-KID-006', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d82b-7f77-9795-ecfa-98db00000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1050000.00, 'SKU-KID-007', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d564-7f77-9795-ecfa-98b500000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1150000.00, 'SKU-MEN-007', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d89d-7f77-9795-ecfa-98e100000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1200000.00, 'SKU-KID-008', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683da14-7f77-9795-ecfa-98f700000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 1950000.00, 'SKU-WOM-004', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d91f-7f77-9795-ecfa-98eb00000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1200000.00, 'SKU-MEN-008', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683db0d-7f77-9795-ecfa-990700000000', 'Áo khoác bò nam dáng ôm vừa', 'Chất liệu bò mềm mại, thiết kế trẻ trung thích hợp mặc khoác ngoài hàng ngày.', 2100000.00, 'SKU-MEN-009', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d42b-7f77-9795-ecfa-98a500000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1250000.00, 'SKU-KID-009', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d6dc-7f77-9795-ecfa-98cb00000000', 'Quần ống rộng nữ kèm thắt lưng', 'Thiết kế mỏng nhẹ, thoáng mát, giúp tôn dáng và cực kỳ thời trang.', 1675000.00, 'SKU-WOM-005', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d598-7f77-9795-ecfa-98b900000000', 'Áo thun nữ cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1125000.00, 'SKU-WOM-006', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d605-7f77-9795-ecfa-98bf00000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1000000.00, 'SKU-KID-010', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d846-7f77-9795-ecfa-98dd00000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 850000.00, 'SKU-MEN-010', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d90a-7f77-9795-ecfa-98e900000000', 'Áo thun nữ cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1050000.00, 'SKU-WOM-007', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d9fa-7f77-9795-ecfa-98f500000000', 'Quần dài trẻ em dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái cho bé.', 1500000.00, 'SKU-KID-011', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683daa2-7f77-9795-ecfa-98ff00000000', 'Áo khoác bò nam dáng ôm vừa', 'Chất liệu bò mềm mại, thiết kế trẻ trung thích hợp mặc khoác ngoài hàng ngày.', 2000000.00, 'SKU-MEN-011', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d8b3-7f77-9795-ecfa-98e300000000', 'Áo thun nữ cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 950000.00, 'SKU-WOM-008', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d654-7f77-9795-ecfa-98c300000000', 'Áo thun bé trai cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 700000.00, 'SKU-KID-012', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d4f4-7f77-9795-ecfa-98af00000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1700000.00, 'SKU-MEN-012', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d57d-7f77-9795-ecfa-98b700000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 650000.00, 'SKU-MEN-013', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d638-7f77-9795-ecfa-98c100000000', 'Quần âu nam xếp ly mờ dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái và thanh lịch.', 1575000.00, 'SKU-MEN-014', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d6c4-7f77-9795-ecfa-98c900000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 2050000.00, 'SKU-WOM-009', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683da71-7f77-9795-ecfa-98fb00000000', 'Áo khoác bò nam dáng ôm vừa', 'Chất liệu bò mềm mại, thiết kế trẻ trung thích hợp mặc khoác ngoài hàng ngày.', 1800000.00, 'SKU-MEN-015', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d7b5-7f77-9795-ecfa-98d500000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 950000.00, 'SKU-KID-013', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d394-7f77-9795-ecfa-98a100000000', 'Áo thun nữ cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1000000.00, 'SKU-WOM-010', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d458-7f77-9795-ecfa-98a700000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 650000.00, 'SKU-MEN-016', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d756-7f77-9795-ecfa-98cf00000000', 'Áo thun bé trai cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 750000.00, 'SKU-KID-014', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d79e-7f77-9795-ecfa-98d300000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 2050000.00, 'SKU-WOM-011', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d7d5-7f77-9795-ecfa-98d700000000', 'Áo khoác bò nam dáng ôm vừa', 'Chất liệu bò mềm mại, thiết kế trẻ trung thích hợp mặc khoác ngoài hàng ngày.', 1975000.00, 'SKU-MEN-017', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d8f2-7f77-9795-ecfa-98e700000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 1950000.00, 'SKU-WOM-012', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d94e-7f77-9795-ecfa-98ed00000000', 'Áo sơ mi nam cotton in họa tiết', 'Chất liệu cotton thoáng mát, họa tiết nổi bật cá tính.', 1300000.00, 'SKU-MEN-018', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683dadf-7f77-9795-ecfa-990300000000', 'Quần dài trẻ em dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái cho bé.', 1000000.00, 'SKU-KID-015', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683daf6-7f77-9795-ecfa-990500000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 1700000.00, 'SKU-WOM-013', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d4b2-7f77-9795-ecfa-98ab00000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1400000.00, 'SKU-KID-016', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d5e0-7f77-9795-ecfa-98bd00000000', 'Quần âu nam xếp ly mờ dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái và thanh lịch.', 1450000.00, 'SKU-MEN-019', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683d8d1-7f77-9795-ecfa-98e500000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 1850000.00, 'SKU-WOM-014', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('6683d5b6-7f77-9795-ecfa-98bb00000000', 'Áo thun bé trai cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1500000.00, 'SKU-KID-017', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
+('6683d889-7f77-9795-ecfa-98df00000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1600000.00, 'SKU-MEN-020', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('6683da88-7f77-9795-ecfa-98fd00000000', 'Quần dài trẻ em dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái cho bé.', 950000.00, 'SKU-KID-018', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
 
--- 1. Sản phẩm: Men Round Neck Pure Cotton T-shirt (ID: ...a3) - Có 4 ảnh
+-- ===== CÔNG NGHỆ =====
+('e0000000-0000-0000-0000-000000000001', 'Apple AirPods Pro Thế hệ 2', 'Apple AirPods Pro (Thế hệ 2) với Hộp sạc MagSafe (USB-C) mang lại âm thanh xuất sắc, chống ồn chủ động và độ vừa vặn thoải mái. Kết nối liền mạch với các thiết bị Apple.', 9990000.00, 'SKU-ELEC-001', 'f0000000-0000-0000-0000-000000000004', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000002', 'Tai nghe Bose QuietComfort 45', 'Tai nghe Bose QuietComfort 45 mang lại chất lượng âm thanh vượt trội và khả năng chống ồn vô song. Với thời lượng pin 24 giờ và thiết kế nhẹ nhàng.', 8250000.00, 'SKU-ELEC-002', 'f0000000-0000-0000-0000-000000000004', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000003', 'Samsung Galaxy S23', 'Samsung Galaxy S23 mang đến trải nghiệm di động toàn diện với màn hình AMOLED tiên tiến, hình ảnh sống động và thao tác mượt mà. Hoàn hảo cho người yêu công nghệ.', 19990000.00, 'SKU-ELEC-003', 'f0000000-0000-0000-0000-000000000005', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000004', 'Đồng hồ thông minh Garmin Venu 2', 'Đồng hồ Garmin Venu 2 kết hợp theo dõi sức khỏe tiên tiến (nhịp tim, GPS, giấc ngủ) với thiết kế tinh tế. Màn hình AMOLED tuyệt đẹp với pin lên tới 24 giờ.', 8750000.00, 'SKU-ELEC-004', 'f0000000-0000-0000-0000-000000000006', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000005', 'Máy chơi game PlayStation 5', 'PlayStation 5 mang đến đồ họa siêu nét HD, SSD 825GB siêu nhanh và công nghệ dò tia (ray tracing). Tốc độ tải siêu nhanh và lối chơi mượt mà ấn tượng.', 12490000.00, 'SKU-ELEC-005', 'f0000000-0000-0000-0000-000000000006', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000006', 'Máy ảnh Canon EOS R5', 'Canon EOS R5 trang bị cảm biến full-frame 45MP, độ phân giải siêu cao, quay video 8K xuất sắc. Là thiết bị đỉnh cao dành cho các nhiếp ảnh gia.', 97490000.00, 'SKU-ELEC-006', 'f0000000-0000-0000-0000-000000000007', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000007', 'Apple MacBook Pro 16', 'MacBook Pro 16 trang bị chip M2 Pro, RAM 16GB và SSD 512GB mang lại hiệu năng đỉnh cao. Màn hình Retina sắc nét cùng công nghệ True Tone tối ưu.', 62490000.00, 'SKU-ELEC-007', 'f0000000-0000-0000-0000-000000000008', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000008', 'Tai nghe Sony WF-1000XM5', 'Tai nghe không dây Sony WF-1000XM5 mang đến âm thanh đắm chìm với chuẩn Hi-Res và chống ồn chủ động. Thiết kế vô cùng thoải mái và nhỏ gọn.', 7490000.00, 'SKU-ELEC-008', 'f0000000-0000-0000-0000-000000000004', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000009', 'Máy chiếu Samsung 4K', 'Máy chiếu 4K Samsung tái tạo rạp chiếu phim tại nhà với hình ảnh siêu sắc nét và màu sắc chân thực. Tích hợp loa trong mạnh mẽ.', 37490000.00, 'SKU-ELEC-009', 'f0000000-0000-0000-0000-000000000006', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000010', 'Laptop ASUS ROG Zephyrus G16', 'ASUS ROG Zephyrus G16 được trang bị CPU Intel Core i9, GPU RTX 4070, RAM 16GB, SSD 1TB. Cỗ máy gaming đỉnh cao dành cho game thủ thực thụ.', 49990000.00, 'SKU-ELEC-010', 'f0000000-0000-0000-0000-000000000008', NOW(), NOW());
+
+-- --------------------------------------------------------
+-- 3. BẢNG HÌNH ẢNH (IMAGE)
+-- --------------------------------------------------------
+-- Ảnh Quần Áo (Sản phẩm 1 có 4 ảnh)
 INSERT INTO hinh_anh (product_id, image_url) VALUES 
 ('6683d3d4-7f77-9795-ecfa-98a300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img2_1.png'),
 ('6683d3d4-7f77-9795-ecfa-98a300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img2_2.png'),
 ('6683d3d4-7f77-9795-ecfa-98a300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img2_3.png'),
 ('6683d3d4-7f77-9795-ecfa-98a300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img2_4.png');
 
--- 2. Các sản phẩm còn lại (Mỗi sản phẩm 1 ảnh theo file data)
+-- Ảnh Quần Áo (Các sản phẩm còn lại 1 ảnh)
 INSERT INTO hinh_anh (product_id, image_url) VALUES 
 ('6683d541-7f77-9795-ecfa-98b300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img10.png'),
 ('6683d809-7f77-9795-ecfa-98d900000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img5.png'),
@@ -120,7 +150,32 @@ INSERT INTO hinh_anh (product_id, image_url) VALUES
 ('6683d889-7f77-9795-ecfa-98df00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img8.png'),
 ('6683da88-7f77-9795-ecfa-98fd00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img47.png');
 
+-- Ảnh Công Nghệ (AirPods có 4 ảnh)
+INSERT INTO hinh_anh (product_id, image_url) VALUES 
+('e0000000-0000-0000-0000-000000000001', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/k4dafzhwhgcn5tnoylrw.webp'),
+('e0000000-0000-0000-0000-000000000001', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/j212frakb8hdrhvhajhg.webp'),
+('e0000000-0000-0000-0000-000000000001', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/imwuugqxsajuwqpkegb5.webp'),
+('e0000000-0000-0000-0000-000000000001', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/k1oqaslw5tb3ebw01vvj.webp');
+
+-- Ảnh Công Nghệ (Các sản phẩm còn lại 1 ảnh)
+INSERT INTO hinh_anh (product_id, image_url) VALUES 
+('e0000000-0000-0000-0000-000000000002', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/m16coelz8ivkk9f0nwrz.webp'),
+('e0000000-0000-0000-0000-000000000003', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/xjd4eprpwqs7odbera1w.webp'),
+('e0000000-0000-0000-0000-000000000004', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/hdfi4u3fmprazpnrnaga.webp'),
+('e0000000-0000-0000-0000-000000000005', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/dd3l13vfoartrgbvkkh5.webp'),
+('e0000000-0000-0000-0000-000000000006', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/r5h370zuujvrw461c6wy.webp'),
+('e0000000-0000-0000-0000-000000000007', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/rzri7kytphxalrm9rubd.webp'),
+('e0000000-0000-0000-0000-000000000008', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/e3zjaupyumdkladmytke.webp'),
+('e0000000-0000-0000-0000-000000000009', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/qqdcly8a8vkyciy9g0bw.webp'),
+('e0000000-0000-0000-0000-000000000010', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/wig1urqgnkeyp4t2rtso.webp');
+
+-- =====================================================================================
+-- DATABASE: db_inventory
+-- =====================================================================================
 USE db_inventory;
 
+-- --------------------------------------------------------
+-- 4. BẢNG TỒN KHO (INVENTORY) - Chèn tự động cho toàn bộ sản phẩm
+-- --------------------------------------------------------
 INSERT INTO inventory (id, product_id, available_quantity, reserved_quantity, low_stock_threshold, created_at, updated_at, version)
 SELECT UUID(), id, 100, 0, 10, NOW(), NOW(), 0 FROM db_product.product;

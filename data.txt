@@ -4,7 +4,7 @@
 USE db_product;
 
 -- --------------------------------------------------------
--- 1. BẢNG DANH MỤC (CATEGORY)
+-- 1. BẢNG DANH MỤC 
 -- --------------------------------------------------------
 INSERT INTO category (category_id, name) VALUES 
 ('f0000000-0000-0000-0000-000000000001', 'Thời trang Nam'),
@@ -14,13 +14,24 @@ INSERT INTO category (category_id, name) VALUES
 ('f0000000-0000-0000-0000-000000000005', 'Điện thoại'),
 ('f0000000-0000-0000-0000-000000000006', 'Phụ kiện'),
 ('f0000000-0000-0000-0000-000000000007', 'Máy ảnh'),
-('f0000000-0000-0000-0000-000000000008', 'Máy tính xách tay');
+('f0000000-0000-0000-0000-000000000008', 'Máy tính xách tay'),
+('f0000000-0000-0000-0000-000000000009', 'Phụ kiện thời trang'),
+('f0000000-0000-0000-0000-000000000010', 'Giày dép'),
+('f0000000-0000-0000-0000-000000000011', 'Sức khỏe & Sắc đẹp'),
+('f0000000-0000-0000-0000-000000000012', 'Tivi & Màn hình'),
+('f0000000-0000-0000-0000-000000000013', 'Máy tính bảng'),
+('f0000000-0000-0000-0000-000000000014', 'Nội thất & Nhà cửa'),
+('f0000000-0000-0000-0000-000000000015', 'Thiết bị gia dụng'),
+('f0000000-0000-0000-0000-000000000016', 'Dụng cụ nhà bếp'),
+('f0000000-0000-0000-0000-000000000017', 'Thể thao & Thể hình'),
+('f0000000-0000-0000-0000-000000000018', 'Y tế & Chăm sóc cá nhân');
+
 
 -- --------------------------------------------------------
--- 2. BẢNG SẢN PHẨM (PRODUCT)
+-- 2. BẢNG SẢN PHẨM
 -- --------------------------------------------------------
 INSERT INTO product (id, name, description, price, sku, category_id, created_at, updated_at) VALUES 
--- ===== THỜI TRANG =====
+-- ===== DỮ LIỆU CŨ: THỜI TRANG =====
 ('6683d3d4-7f77-9795-ecfa-98a300000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 2000000.00, 'SKU-MEN-001', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
 ('6683d541-7f77-9795-ecfa-98b300000000', 'Quần âu nam xếp ly mờ dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái và thanh lịch.', 1800000.00, 'SKU-MEN-002', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
 ('6683d809-7f77-9795-ecfa-98d900000000', 'Áo thun nữ cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 900000.00, 'SKU-WOM-001', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
@@ -34,70 +45,78 @@ INSERT INTO product (id, name, description, price, sku, category_id, created_at,
 ('6683d521-7f77-9795-ecfa-98b100000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1600000.00, 'SKU-KID-004', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
 ('6683d6a5-7f77-9795-ecfa-98c700000000', 'Quần ống rộng nữ kèm thắt lưng', 'Thiết kế mỏng nhẹ, thoáng mát, giúp tôn dáng và cực kỳ thời trang.', 1300000.00, 'SKU-WOM-003', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
 ('6683d9b2-7f77-9795-ecfa-98f100000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1350000.00, 'SKU-MEN-006', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d773-7f77-9795-ecfa-98d100000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1500000.00, 'SKU-KID-005', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d688-7f77-9795-ecfa-98c500000000', 'Áo thun bé trai cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 900000.00, 'SKU-KID-006', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d82b-7f77-9795-ecfa-98db00000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1050000.00, 'SKU-KID-007', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d564-7f77-9795-ecfa-98b500000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1150000.00, 'SKU-MEN-007', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d89d-7f77-9795-ecfa-98e100000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1200000.00, 'SKU-KID-008', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683da14-7f77-9795-ecfa-98f700000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 1950000.00, 'SKU-WOM-004', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d91f-7f77-9795-ecfa-98eb00000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1200000.00, 'SKU-MEN-008', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683db0d-7f77-9795-ecfa-990700000000', 'Áo khoác bò nam dáng ôm vừa', 'Chất liệu bò mềm mại, thiết kế trẻ trung thích hợp mặc khoác ngoài hàng ngày.', 2100000.00, 'SKU-MEN-009', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d42b-7f77-9795-ecfa-98a500000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1250000.00, 'SKU-KID-009', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d6dc-7f77-9795-ecfa-98cb00000000', 'Quần ống rộng nữ kèm thắt lưng', 'Thiết kế mỏng nhẹ, thoáng mát, giúp tôn dáng và cực kỳ thời trang.', 1675000.00, 'SKU-WOM-005', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d598-7f77-9795-ecfa-98b900000000', 'Áo thun nữ cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1125000.00, 'SKU-WOM-006', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d605-7f77-9795-ecfa-98bf00000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1000000.00, 'SKU-KID-010', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d846-7f77-9795-ecfa-98dd00000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 850000.00, 'SKU-MEN-010', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d90a-7f77-9795-ecfa-98e900000000', 'Áo thun nữ cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1050000.00, 'SKU-WOM-007', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d9fa-7f77-9795-ecfa-98f500000000', 'Quần dài trẻ em dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái cho bé.', 1500000.00, 'SKU-KID-011', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683daa2-7f77-9795-ecfa-98ff00000000', 'Áo khoác bò nam dáng ôm vừa', 'Chất liệu bò mềm mại, thiết kế trẻ trung thích hợp mặc khoác ngoài hàng ngày.', 2000000.00, 'SKU-MEN-011', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d8b3-7f77-9795-ecfa-98e300000000', 'Áo thun nữ cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 950000.00, 'SKU-WOM-008', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d654-7f77-9795-ecfa-98c300000000', 'Áo thun bé trai cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 700000.00, 'SKU-KID-012', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d4f4-7f77-9795-ecfa-98af00000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1700000.00, 'SKU-MEN-012', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d57d-7f77-9795-ecfa-98b700000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 650000.00, 'SKU-MEN-013', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d638-7f77-9795-ecfa-98c100000000', 'Quần âu nam xếp ly mờ dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái và thanh lịch.', 1575000.00, 'SKU-MEN-014', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d6c4-7f77-9795-ecfa-98c900000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 2050000.00, 'SKU-WOM-009', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683da71-7f77-9795-ecfa-98fb00000000', 'Áo khoác bò nam dáng ôm vừa', 'Chất liệu bò mềm mại, thiết kế trẻ trung thích hợp mặc khoác ngoài hàng ngày.', 1800000.00, 'SKU-MEN-015', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d7b5-7f77-9795-ecfa-98d500000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 950000.00, 'SKU-KID-013', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d394-7f77-9795-ecfa-98a100000000', 'Áo thun nữ cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1000000.00, 'SKU-WOM-010', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d458-7f77-9795-ecfa-98a700000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 650000.00, 'SKU-MEN-016', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d756-7f77-9795-ecfa-98cf00000000', 'Áo thun bé trai cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 750000.00, 'SKU-KID-014', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d79e-7f77-9795-ecfa-98d300000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 2050000.00, 'SKU-WOM-011', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d7d5-7f77-9795-ecfa-98d700000000', 'Áo khoác bò nam dáng ôm vừa', 'Chất liệu bò mềm mại, thiết kế trẻ trung thích hợp mặc khoác ngoài hàng ngày.', 1975000.00, 'SKU-MEN-017', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d8f2-7f77-9795-ecfa-98e700000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 1950000.00, 'SKU-WOM-012', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d94e-7f77-9795-ecfa-98ed00000000', 'Áo sơ mi nam cotton in họa tiết', 'Chất liệu cotton thoáng mát, họa tiết nổi bật cá tính.', 1300000.00, 'SKU-MEN-018', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683dadf-7f77-9795-ecfa-990300000000', 'Quần dài trẻ em dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái cho bé.', 1000000.00, 'SKU-KID-015', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683daf6-7f77-9795-ecfa-990500000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 1700000.00, 'SKU-WOM-013', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d4b2-7f77-9795-ecfa-98ab00000000', 'Áo thun bé gái cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1400000.00, 'SKU-KID-016', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d5e0-7f77-9795-ecfa-98bd00000000', 'Quần âu nam xếp ly mờ dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái và thanh lịch.', 1450000.00, 'SKU-MEN-019', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683d8d1-7f77-9795-ecfa-98e500000000', 'Áo khoác nữ có khóa kéo dáng rộng', 'Áo khoác nhẹ nhàng, phong cách thoải mái dễ dàng phối đồ.', 1850000.00, 'SKU-WOM-014', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
-('6683d5b6-7f77-9795-ecfa-98bb00000000', 'Áo thun bé trai cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1500000.00, 'SKU-KID-017', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
-('6683d889-7f77-9795-ecfa-98df00000000', 'Áo thun nam cổ tròn cotton', 'Áo chui đầu nhẹ nhàng, dệt kim, thiết kế mang lại sự thoải mái và linh hoạt.', 1600000.00, 'SKU-MEN-020', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
-('6683da88-7f77-9795-ecfa-98fd00000000', 'Quần dài trẻ em dáng ôm', 'Thiết kế nhẹ nhàng, co giãn tốt, mang lại cảm giác thoải mái cho bé.', 950000.00, 'SKU-KID-018', 'f0000000-0000-0000-0000-000000000003', NOW(), NOW()),
 
--- ===== CÔNG NGHỆ =====
-('e0000000-0000-0000-0000-000000000001', 'Apple AirPods Pro Thế hệ 2', 'Apple AirPods Pro (Thế hệ 2) với Hộp sạc MagSafe (USB-C) mang lại âm thanh xuất sắc, chống ồn chủ động và độ vừa vặn thoải mái. Kết nối liền mạch với các thiết bị Apple.', 9990000.00, 'SKU-ELEC-001', 'f0000000-0000-0000-0000-000000000004', NOW(), NOW()),
-('e0000000-0000-0000-0000-000000000002', 'Tai nghe Bose QuietComfort 45', 'Tai nghe Bose QuietComfort 45 mang lại chất lượng âm thanh vượt trội và khả năng chống ồn vô song. Với thời lượng pin 24 giờ và thiết kế nhẹ nhàng.', 8250000.00, 'SKU-ELEC-002', 'f0000000-0000-0000-0000-000000000004', NOW(), NOW()),
-('e0000000-0000-0000-0000-000000000003', 'Samsung Galaxy S23', 'Samsung Galaxy S23 mang đến trải nghiệm di động toàn diện với màn hình AMOLED tiên tiến, hình ảnh sống động và thao tác mượt mà. Hoàn hảo cho người yêu công nghệ.', 19990000.00, 'SKU-ELEC-003', 'f0000000-0000-0000-0000-000000000005', NOW(), NOW()),
-('e0000000-0000-0000-0000-000000000004', 'Đồng hồ thông minh Garmin Venu 2', 'Đồng hồ Garmin Venu 2 kết hợp theo dõi sức khỏe tiên tiến (nhịp tim, GPS, giấc ngủ) với thiết kế tinh tế. Màn hình AMOLED tuyệt đẹp với pin lên tới 24 giờ.', 8750000.00, 'SKU-ELEC-004', 'f0000000-0000-0000-0000-000000000006', NOW(), NOW()),
-('e0000000-0000-0000-0000-000000000005', 'Máy chơi game PlayStation 5', 'PlayStation 5 mang đến đồ họa siêu nét HD, SSD 825GB siêu nhanh và công nghệ dò tia (ray tracing). Tốc độ tải siêu nhanh và lối chơi mượt mà ấn tượng.', 12490000.00, 'SKU-ELEC-005', 'f0000000-0000-0000-0000-000000000006', NOW(), NOW()),
-('e0000000-0000-0000-0000-000000000006', 'Máy ảnh Canon EOS R5', 'Canon EOS R5 trang bị cảm biến full-frame 45MP, độ phân giải siêu cao, quay video 8K xuất sắc. Là thiết bị đỉnh cao dành cho các nhiếp ảnh gia.', 97490000.00, 'SKU-ELEC-006', 'f0000000-0000-0000-0000-000000000007', NOW(), NOW()),
-('e0000000-0000-0000-0000-000000000007', 'Apple MacBook Pro 16', 'MacBook Pro 16 trang bị chip M2 Pro, RAM 16GB và SSD 512GB mang lại hiệu năng đỉnh cao. Màn hình Retina sắc nét cùng công nghệ True Tone tối ưu.', 62490000.00, 'SKU-ELEC-007', 'f0000000-0000-0000-0000-000000000008', NOW(), NOW()),
-('e0000000-0000-0000-0000-000000000008', 'Tai nghe Sony WF-1000XM5', 'Tai nghe không dây Sony WF-1000XM5 mang đến âm thanh đắm chìm với chuẩn Hi-Res và chống ồn chủ động. Thiết kế vô cùng thoải mái và nhỏ gọn.', 7490000.00, 'SKU-ELEC-008', 'f0000000-0000-0000-0000-000000000004', NOW(), NOW()),
-('e0000000-0000-0000-0000-000000000009', 'Máy chiếu Samsung 4K', 'Máy chiếu 4K Samsung tái tạo rạp chiếu phim tại nhà với hình ảnh siêu sắc nét và màu sắc chân thực. Tích hợp loa trong mạnh mẽ.', 37490000.00, 'SKU-ELEC-009', 'f0000000-0000-0000-0000-000000000006', NOW(), NOW()),
-('e0000000-0000-0000-0000-000000000010', 'Laptop ASUS ROG Zephyrus G16', 'ASUS ROG Zephyrus G16 được trang bị CPU Intel Core i9, GPU RTX 4070, RAM 16GB, SSD 1TB. Cỗ máy gaming đỉnh cao dành cho game thủ thực thụ.', 49990000.00, 'SKU-ELEC-010', 'f0000000-0000-0000-0000-000000000008', NOW(), NOW());
+-- ===== DỮ LIỆU CŨ: CÔNG NGHỆ =====
+('e0000000-0000-0000-0000-000000000001', 'Apple AirPods Pro Thế hệ 2', 'Apple AirPods Pro (Thế hệ 2) với Hộp sạc MagSafe mang lại âm thanh xuất sắc, chống ồn chủ động.', 9990000.00, 'SKU-ELEC-001', 'f0000000-0000-0000-0000-000000000004', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000002', 'Tai nghe Bose QuietComfort 45', 'Tai nghe Bose QuietComfort 45 mang lại chất lượng âm thanh vượt trội và khả năng chống ồn vô song.', 8250000.00, 'SKU-ELEC-002', 'f0000000-0000-0000-0000-000000000004', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000003', 'Samsung Galaxy S23', 'Samsung Galaxy S23 mang đến trải nghiệm di động toàn diện với màn hình AMOLED tiên tiến.', 19990000.00, 'SKU-ELEC-003', 'f0000000-0000-0000-0000-000000000005', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000004', 'Đồng hồ thông minh Garmin Venu 2', 'Kết hợp theo dõi sức khỏe tiên tiến với thiết kế tinh tế. Màn hình AMOLED tuyệt đẹp.', 8750000.00, 'SKU-ELEC-004', 'f0000000-0000-0000-0000-000000000006', NOW(), NOW()),
+('e0000000-0000-0000-0000-000000000005', 'Máy chơi game PlayStation 5', 'PlayStation 5 mang đến đồ họa siêu nét HD, SSD 825GB siêu nhanh và công nghệ dò tia.', 12490000.00, 'SKU-ELEC-005', 'f0000000-0000-0000-0000-000000000006', NOW(), NOW()),
+
+-- ===== DỮ LIỆU MỚI =====
+('c0000000-0000-0000-0000-000000000001', 'Kem dưỡng ẩm da mặt', 'Được công thức hóa chuyên sâu để nuôi dưỡng và cấp ẩm cho da, mang lại làn da mềm mại, rạng rỡ.', 500000.00, 'SKU-BEAU-001', 'f0000000-0000-0000-0000-000000000011', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000002', 'Dầu gội trị gàu', 'Đánh bay vảy gàu và giảm ngứa hiệu quả, mang lại da đầu khỏe mạnh.', 375000.00, 'SKU-BEAU-002', 'f0000000-0000-0000-0000-000000000011', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000003', 'Kem nền dạng lỏng mịn lỳ', 'Mang lại lớp nền hoàn hảo, lâu trôi. Chất kem mỏng nhẹ, thoáng khí, tiệp vào da một cách tự nhiên.', 550000.00, 'SKU-BEAU-003', 'f0000000-0000-0000-0000-000000000011', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000004', 'Nước hoa Eau de Parfum - Hương hoa cỏ', 'Trải nghiệm tinh hoa của những đóa hoa đang nở rộ. Mùi hương thanh lịch bao bọc lấy bạn.', 875000.00, 'SKU-BEAU-004', 'f0000000-0000-0000-0000-000000000011', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000005', 'Bộ cạo râu cho nam', 'Bao gồm mọi dụng cụ cần thiết để cạo râu sát và thoải mái. Kèm theo dao cạo cao cấp.', 450000.00, 'SKU-BEAU-005', 'f0000000-0000-0000-0000-000000000011', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000006', 'Sữa tắm dưỡng ẩm', 'Nhẹ nhàng làm sạch đồng thời bổ sung độ ẩm, mang lại cảm giác mềm mại và tràn đầy sức sống.', 325000.00, 'SKU-BEAU-006', 'f0000000-0000-0000-0000-000000000011', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000007', 'Sơn móng tay siêu bóng', 'Sở hữu bộ móng tuyệt đẹp với độ bóng cao và bền màu. Sự lựa chọn hoàn hảo.', 200000.00, 'SKU-BEAU-007', 'f0000000-0000-0000-0000-000000000011', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000008', 'Dầu xả dưỡng ẩm', 'Cấp nước sâu và gỡ rối, giúp tóc mềm mượt và dễ vào nếp. Thích hợp cho mọi loại tóc.', 425000.00, 'SKU-BEAU-008', 'f0000000-0000-0000-0000-000000000011', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000009', 'Dao cạo ba lưỡi', 'Thiết kế ba lưỡi mang lại đường cạo siêu sát mà không gây kích ứng.', 250000.00, 'SKU-BEAU-009', 'f0000000-0000-0000-0000-000000000011', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000010', 'Viên uống bổ sung Vitamin C', 'Tăng cường sức khỏe và hệ miễn dịch. Dạng viên dễ uống cung cấp dưỡng chất thiết yếu.', 750000.00, 'SKU-BEAU-010', 'f0000000-0000-0000-0000-000000000011', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000011', 'Tai nghe Bluetooth không dây', 'Trải nghiệm chất lượng âm thanh vượt trội, thiết kế thoải mái và tiện lợi.', 1999000.00, 'SKU-ELEC-011', 'f0000000-0000-0000-0000-000000000004', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000012', 'Điện thoại thông minh - 128GB', 'Điện thoại hiệu năng cao bộ nhớ 128GB, hoàn hảo để lưu trữ ứng dụng và hình ảnh.', 11250000.00, 'SKU-ELEC-012', 'f0000000-0000-0000-0000-000000000005', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000013', 'Tivi 4K Ultra HD 55-Inch', 'Tận hưởng trải nghiệm hình ảnh ngoạn mục với độ chi tiết tuyệt vời và màu sắc sống động.', 22500000.00, 'SKU-ELEC-013', 'f0000000-0000-0000-0000-000000000012', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000014', 'Laptop Gaming - 16GB RAM, 512GB SSD', 'Giải phóng tiềm năng chơi game của bạn với chiếc laptop mạnh mẽ.', 30000000.00, 'SKU-ELEC-014', 'f0000000-0000-0000-0000-000000000008', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000015', 'Đồng hồ thông minh theo dõi sức khỏe', 'Theo dõi sức khỏe và giữ kết nối, lý tưởng để tập luyện thể thao.', 3750000.00, 'SKU-ELEC-015', 'f0000000-0000-0000-0000-000000000006', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000016', 'Máy tính bảng Android 10.1-Inch', 'Thưởng thức phim ảnh và giải trí trên màn hình 10.1 inch rực rỡ.', 5000000.00, 'SKU-ELEC-016', 'f0000000-0000-0000-0000-000000000013', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000017', 'Loa Bluetooth di động', 'Mang âm nhạc đi muôn nơi. Loa nhỏ gọn nhưng mang lại âm thanh mạnh mẽ.', 1250000.00, 'SKU-ELEC-017', 'f0000000-0000-0000-0000-000000000006', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000018', 'Máy ảnh DSLR - 24MP', 'Ghi lại những bức ảnh và video tuyệt đẹp bằng camera DSLR 24MP.', 21250000.00, 'SKU-ELEC-018', 'f0000000-0000-0000-0000-000000000007', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000019', 'USB lưu trữ - 64GB', 'Lưu trữ và truyền tải tập tin một cách an toàn với dung lượng 64GB.', 300000.00, 'SKU-ELEC-019', 'f0000000-0000-0000-0000-000000000006', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000020', 'Máy quay hành động 4K', 'Lưu giữ những chuyến phiêu lưu với độ phân giải 4K. Thiết kế siêu bền bỉ.', 4500000.00, 'SKU-ELEC-020', 'f0000000-0000-0000-0000-000000000007', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000021', 'Áo khoác bò nam', 'Chiếc áo khoác bò sành điệu hoàn hảo cho phong cách thường ngày.', 875000.00, 'SKU-MEN-021', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000022', 'Váy Maxi nữ họa tiết hoa', 'Tôn lên vẻ thanh lịch với form dáng thướt tha và họa tiết hoa rực rỡ.', 1050000.00, 'SKU-WOM-015', 'f0000000-0000-0000-0000-000000000002', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000023', 'Giày thể thao Unisex', 'Sự pha trộn hoàn hảo giữa tiện nghi và phong cách. Trọng lượng siêu nhẹ.', 1375000.00, 'SKU-SHOE-001', 'f0000000-0000-0000-0000-000000000010', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000024', 'Túi xách Tote da', 'Nâng tầm phong cách với túi xách da cao cấp. Không gian bên trong rộng rãi.', 1500000.00, 'SKU-FACC-001', 'f0000000-0000-0000-0000-000000000009', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000025', 'Kính râm phân cực', 'Bảo vệ đôi mắt thật phong cách. Tròng kính phân cực giúp giảm độ chói.', 625000.00, 'SKU-FACC-002', 'f0000000-0000-0000-0000-000000000009', NOW(), NOW()),
+
+-- ===== DỮ LIỆU MỚI =====
+('c0000000-0000-0000-0000-000000000026', 'Áo sơ mi nam công sở', 'Sự kết hợp hoàn hảo giữa vẻ thanh lịch và sự thoải mái. Cắt may tỉ mỉ, cổ áo cứng cáp chuẩn form, lý tưởng cho môi trường công sở hoặc sự kiện.', 775000.00, 'SKU-MEN-022', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000027', 'Giày cao gót nữ', 'Bước đi tự tin với thiết kế thanh mảnh, tôn dáng nhưng vẫn vô cùng êm chân. Điểm nhấn hoàn hảo cho những buổi tiệc hay dạ hội.', 1125000.00, 'SKU-SHOE-002', 'f0000000-0000-0000-0000-000000000010', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000028', 'Áo thun in họa tiết', 'Thể hiện cá tính với họa tiết độc đáo và màu sắc nổi bật. Chất liệu cotton mềm mại, form rộng rãi thoải mái dạo phố.', 450000.00, 'SKU-MEN-023', 'f0000000-0000-0000-0000-000000000001', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000029', 'Túi xách nữ thiết kế cao cấp', 'Chế tác từ chất liệu sang trọng với các đường nét tinh tế. Không gian rộng rãi chứa trọn vật dụng cá nhân mà vẫn giữ phom dáng quý phái.', 1875000.00, 'SKU-FACC-003', 'f0000000-0000-0000-0000-000000000009', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000030', 'Dép xỏ ngón siêu êm', 'Mang lại sự thư giãn tuyệt đối cho đôi chân. Quai mềm mại, đế đệm nhẹ nhàng, hoàn hảo để đi biển, hồ bơi hay dạo quanh nhà.', 300000.00, 'SKU-SHOE-003', 'f0000000-0000-0000-0000-000000000010', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000031', 'Ghế Sofa da hiện đại', 'Sofa da cao cấp mang thiết kế đương đại, nâng tầm sự sang trọng cho phòng khách đồng thời đem lại sự êm ái tối đa khi nghỉ ngơi.', 30000000.00, 'SKU-HOME-001', 'f0000000-0000-0000-0000-000000000014', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000032', 'Tủ lạnh thép không gỉ', 'Tủ lạnh dung tích lớn với bề mặt thép không gỉ sang trọng. Tích hợp công nghệ hiện đại, siêu tiết kiệm điện và giữ thực phẩm luôn tươi ngon.', 23750000.00, 'SKU-APPL-001', 'f0000000-0000-0000-0000-000000000015', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000033', 'Máy hút bụi không dây', 'Làm sạch mọi ngóc ngách dễ dàng không vướng víu. Lực hút mạnh mẽ, thiết kế nhẹ nhàng tiện lợi cho mọi không gian nhà ở.', 4500000.00, 'SKU-APPL-002', 'f0000000-0000-0000-0000-000000000015', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000034', 'Bộ nồi chảo chống dính', 'Giải pháp tuyệt vời cho nhà bếp. Lớp phủ chống dính cao cấp giúp nấu ăn dễ dàng, không bị bám dính, thao tác cọ rửa nhanh chóng.', 6250000.00, 'SKU-KITC-001', 'f0000000-0000-0000-0000-000000000016', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000035', 'Bộ bát đĩa sứ Porcelain', 'Nâng tầm bữa ăn gia đình với bộ bát đĩa sứ tinh xảo, vừa mang tính ứng dụng cao vừa là điểm nhấn thanh lịch cho bàn ăn.', 4000000.00, 'SKU-KITC-002', 'f0000000-0000-0000-0000-000000000016', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000036', 'Nệm Memory Foam', 'Trải nghiệm giấc ngủ sâu với công nghệ bọt nhớ (memory foam) định hình theo cơ thể, cung cấp sự hỗ trợ hoàn hảo cho cột sống.', 18750000.00, 'SKU-HOME-002', 'f0000000-0000-0000-0000-000000000014', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000037', 'Đèn bàn phong cách đương đại', 'Thắp sáng không gian với chiếc đèn bàn tinh tế. Ánh sáng ấm áp phù hợp để đọc sách hay tạo bầu không khí thư giãn trong phòng.', 1250000.00, 'SKU-HOME-003', 'f0000000-0000-0000-0000-000000000014', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000038', 'Thảm trải sàn dệt tay', 'Thêm phần ấm cúng cho căn nhà với tấm thảm thủ công sắc sảo. Họa tiết phức tạp làm điểm nhấn nghệ thuật và siêu êm ái khi bước lên.', 5000000.00, 'SKU-HOME-004', 'f0000000-0000-0000-0000-000000000014', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000039', 'Bộ 4 hộp nhựa đa năng', 'Giữ cho không gian luôn gọn gàng với bộ hộp lưu trữ chắc chắn. Hoàn hảo để bảo quản đồ đạc, giữ mọi thứ an toàn và dễ tìm kiếm.', 2000000.00, 'SKU-HOME-005', 'f0000000-0000-0000-0000-000000000014', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000040', 'Bộ dụng cụ làm sạch tự nhiên', 'Bộ sản phẩm tẩy rửa sinh học, đánh bay vết bẩn hiệu quả nhưng vẫn an toàn tuyệt đối cho gia đình và thân thiện với môi trường.', 2500000.00, 'SKU-HOME-006', 'f0000000-0000-0000-0000-000000000014', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000041', 'Máy chạy bộ điện gấp gọn', 'Duy trì vóc dáng ngay tại nhà một cách tiện lợi. Động cơ êm ái, đa dạng tốc độ và thiết kế gấp gọn tiết kiệm diện tích tối đa.', 87500000.00, 'SKU-FIT-001', 'f0000000-0000-0000-0000-000000000017', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000042', 'Bộ tạ tay điều chỉnh 20kg', 'Trải nghiệm tập gym linh hoạt với tạ tháo lắp. Tổng trọng lượng 20kg, đáp ứng hoàn hảo mọi bài tập phát triển cơ bắp tại nhà.', 15000000.00, 'SKU-FIT-002', 'f0000000-0000-0000-0000-000000000017', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000043', 'Sữa tăng cơ Whey Protein 2kg', 'Nguồn cung cấp protein tinh khiết giúp phục hồi và phát triển cơ bắp sau tập luyện. Gói 2kg tối ưu cho các vận động viên và dân thể hình.', 8750000.00, 'SKU-FIT-003', 'f0000000-0000-0000-0000-000000000017', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000044', 'Máy đo huyết áp điện tử', 'Theo dõi sức khỏe chủ động. Máy đo bắp tay cho kết quả kỹ thuật số nhanh chóng, cực kỳ chính xác và thao tác đơn giản tại nhà.', 5500000.00, 'SKU-MED-001', 'f0000000-0000-0000-0000-000000000018', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000045', 'Hộp cứu thương mini', 'Vật dụng thiết yếu cho mọi gia đình hoặc các chuyến du lịch. Trang bị đầy đủ dụng cụ sơ cứu cơ bản để xử lý nhanh các chấn thương nhẹ.', 3000000.00, 'SKU-MED-002', 'f0000000-0000-0000-0000-000000000018', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000046', 'Nước rửa tay sát khuẩn 500ml', 'Bảo vệ đôi tay khỏi vi khuẩn. Dung tích 500ml dùng lâu dài, chứa cồn y tế diệt khuẩn nhanh chóng mà không làm khô ráp da tay.', 200000.00, 'SKU-MED-003', 'f0000000-0000-0000-0000-000000000018', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000047', 'Găng tay tập Gym', 'Nâng cao hiệu suất với đôi găng tay bám chắc, chống chai sần và bảo vệ lòng bàn tay trong các bài tập cử tạ cường độ cao.', 750000.00, 'SKU-FIT-004', 'f0000000-0000-0000-0000-000000000017', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000048', 'Nhiệt kế hồng ngoại kỹ thuật số', 'Đo nhiệt độ siêu tốc độ mà không cần chạm trực tiếp. An toàn, hợp vệ sinh và cực kỳ cần thiết để theo dõi sức khỏe cho trẻ nhỏ và gia đình.', 3750000.00, 'SKU-MED-004', 'f0000000-0000-0000-0000-000000000018', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000049', 'Thảm tập Yoga chống trượt', 'Hỗ trợ thực hiện các tư thế Yoga an toàn với bề mặt bám sàn tuyệt đối. Chất liệu đàn hồi êm ái, phù hợp cho mọi cấp độ tập luyện.', 1250000.00, 'SKU-FIT-005', 'f0000000-0000-0000-0000-000000000017', NOW(), NOW()),
+('c0000000-0000-0000-0000-000000000050', 'Đai bảo vệ đầu gối thể thao', 'Cung cấp lực nâng đỡ hoàn hảo cho khớp gối trong suốt quá trình vận động. Chất liệu co giãn ôm sát, phòng ngừa chấn thương hiệu quả.', 1000000.00, 'SKU-FIT-006', 'f0000000-0000-0000-0000-000000000017', NOW(), NOW());
+
 
 -- --------------------------------------------------------
--- 3. BẢNG HÌNH ẢNH (IMAGE)
+-- 3. BẢNG HÌNH ẢNH (IMAGES)
 -- --------------------------------------------------------
--- Ảnh Quần Áo (Sản phẩm 1 có 4 ảnh)
+-- Dữ liệu cũ
 INSERT INTO hinh_anh (product_id, image_url) VALUES 
 ('6683d3d4-7f77-9795-ecfa-98a300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img2_1.png'),
 ('6683d3d4-7f77-9795-ecfa-98a300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img2_2.png'),
 ('6683d3d4-7f77-9795-ecfa-98a300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img2_3.png'),
-('6683d3d4-7f77-9795-ecfa-98a300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img2_4.png');
-
--- Ảnh Quần Áo (Các sản phẩm còn lại 1 ảnh)
-INSERT INTO hinh_anh (product_id, image_url) VALUES 
+('6683d3d4-7f77-9795-ecfa-98a300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img2_4.png'),
 ('6683d541-7f77-9795-ecfa-98b300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img10.png'),
 ('6683d809-7f77-9795-ecfa-98d900000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img5.png'),
 ('6683d493-7f77-9795-ecfa-98a900000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img29.png'),
@@ -110,64 +129,69 @@ INSERT INTO hinh_anh (product_id, image_url) VALUES
 ('6683d521-7f77-9795-ecfa-98b100000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img9.png'),
 ('6683d6a5-7f77-9795-ecfa-98c700000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img20.png'),
 ('6683d9b2-7f77-9795-ecfa-98f100000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img41.png'),
-('6683d773-7f77-9795-ecfa-98d100000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img25.png'),
-('6683d688-7f77-9795-ecfa-98c500000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img19.png'),
-('6683d82b-7f77-9795-ecfa-98db00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img6.png'),
-('6683d564-7f77-9795-ecfa-98b500000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img11.png'),
-('6683d89d-7f77-9795-ecfa-98e100000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img9.png'),
-('6683da14-7f77-9795-ecfa-98f700000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img44.png'),
-('6683d91f-7f77-9795-ecfa-98eb00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img14.png'),
-('6683db0d-7f77-9795-ecfa-990700000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img52.png'),
-('6683d42b-7f77-9795-ecfa-98a500000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img3.png'),
-('6683d6dc-7f77-9795-ecfa-98cb00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img22.png'),
-('6683d598-7f77-9795-ecfa-98b900000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img13.png'),
-('6683d605-7f77-9795-ecfa-98bf00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img16.png'),
-('6683d846-7f77-9795-ecfa-98dd00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img31.png'),
-('6683d90a-7f77-9795-ecfa-98e900000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img13.png'),
-('6683d9fa-7f77-9795-ecfa-98f500000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img43.png'),
-('6683daa2-7f77-9795-ecfa-98ff00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img48.png'),
-('6683d8b3-7f77-9795-ecfa-98e300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img34.png'),
-('6683d654-7f77-9795-ecfa-98c300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img18.png'),
-('6683d4f4-7f77-9795-ecfa-98af00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img8.png'),
-('6683d57d-7f77-9795-ecfa-98b700000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img12.png'),
-('6683d638-7f77-9795-ecfa-98c100000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img17.png'),
-('6683d6c4-7f77-9795-ecfa-98c900000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img21.png'),
-('6683da71-7f77-9795-ecfa-98fb00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img46.png'),
-('6683d7b5-7f77-9795-ecfa-98d500000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img3.png'),
-('6683d394-7f77-9795-ecfa-98a100000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img1.png'),
-('6683d458-7f77-9795-ecfa-98a700000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img4.png'),
-('6683d756-7f77-9795-ecfa-98cf00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img24.png'),
-('6683d79e-7f77-9795-ecfa-98d300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img26.png'),
-('6683d7d5-7f77-9795-ecfa-98d700000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img28.png'),
-('6683d8f2-7f77-9795-ecfa-98e700000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img36.png'),
-('6683d94e-7f77-9795-ecfa-98ed00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img39.png'),
-('6683dadf-7f77-9795-ecfa-990300000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img50.png'),
-('6683daf6-7f77-9795-ecfa-990500000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img51.png'),
-('6683d4b2-7f77-9795-ecfa-98ab00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img6.png'),
-('6683d5e0-7f77-9795-ecfa-98bd00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img15.png'),
-('6683d8d1-7f77-9795-ecfa-98e500000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img35.png'),
-('6683d5b6-7f77-9795-ecfa-98bb00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img14.png'),
-('6683d889-7f77-9795-ecfa-98df00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img8.png'),
-('6683da88-7f77-9795-ecfa-98fd00000000', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/forever/p_img47.png');
-
--- Ảnh Công Nghệ (AirPods có 4 ảnh)
-INSERT INTO hinh_anh (product_id, image_url) VALUES 
 ('e0000000-0000-0000-0000-000000000001', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/k4dafzhwhgcn5tnoylrw.webp'),
 ('e0000000-0000-0000-0000-000000000001', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/j212frakb8hdrhvhajhg.webp'),
 ('e0000000-0000-0000-0000-000000000001', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/imwuugqxsajuwqpkegb5.webp'),
-('e0000000-0000-0000-0000-000000000001', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/k1oqaslw5tb3ebw01vvj.webp');
-
--- Ảnh Công Nghệ (Các sản phẩm còn lại 1 ảnh)
-INSERT INTO hinh_anh (product_id, image_url) VALUES 
+('e0000000-0000-0000-0000-000000000001', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/k1oqaslw5tb3ebw01vvj.webp'),
 ('e0000000-0000-0000-0000-000000000002', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/m16coelz8ivkk9f0nwrz.webp'),
 ('e0000000-0000-0000-0000-000000000003', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/xjd4eprpwqs7odbera1w.webp'),
 ('e0000000-0000-0000-0000-000000000004', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/hdfi4u3fmprazpnrnaga.webp'),
 ('e0000000-0000-0000-0000-000000000005', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/dd3l13vfoartrgbvkkh5.webp'),
-('e0000000-0000-0000-0000-000000000006', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/r5h370zuujvrw461c6wy.webp'),
-('e0000000-0000-0000-0000-000000000007', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/rzri7kytphxalrm9rubd.webp'),
-('e0000000-0000-0000-0000-000000000008', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/e3zjaupyumdkladmytke.webp'),
-('e0000000-0000-0000-0000-000000000009', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/qqdcly8a8vkyciy9g0bw.webp'),
-('e0000000-0000-0000-0000-000000000010', 'https://raw.githubusercontent.com/avinashdm/gs-images/main/quickcart/wig1urqgnkeyp4t2rtso.webp');
+
+-- Dữ liệu
+('c0000000-0000-0000-0000-000000000001', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/moisturizer.jpg'),
+('c0000000-0000-0000-0000-000000000002', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/shampoo.jpg'),
+('c0000000-0000-0000-0000-000000000003', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/foundation.jpg'),
+('c0000000-0000-0000-0000-000000000004', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/perfume.jpg'),
+('c0000000-0000-0000-0000-000000000005', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/shaving-kit.jpg'),
+('c0000000-0000-0000-0000-000000000006', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/body-wash.jpg'),
+('c0000000-0000-0000-0000-000000000007', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/nail-polish.jpg'),
+('c0000000-0000-0000-0000-000000000008', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/conditioner.jpg'),
+('c0000000-0000-0000-0000-000000000009', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/razor.jpg'),
+('c0000000-0000-0000-0000-000000000010', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/vitamin-supplement.jpg'),
+('c0000000-0000-0000-0000-000000000011', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/wireless-headphones.jpg'),
+('c0000000-0000-0000-0000-000000000012', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/smartphone.jpg'),
+('c0000000-0000-0000-0000-000000000013', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/4k-tv.jpg'),
+('c0000000-0000-0000-0000-000000000014', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/laptop.jpg'),
+('c0000000-0000-0000-0000-000000000015', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/smartwatch.jpg'),
+('c0000000-0000-0000-0000-000000000016', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/tablet.jpg'),
+('c0000000-0000-0000-0000-000000000017', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/bluetooth-speaker.jpg'),
+('c0000000-0000-0000-0000-000000000018', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/dslr-camera.jpg'),
+('c0000000-0000-0000-0000-000000000019', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/usb-drive.jpg'),
+('c0000000-0000-0000-0000-000000000020', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/action-camera.jpg'),
+('c0000000-0000-0000-0000-000000000021', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/denim-jacket.jpg'),
+('c0000000-0000-0000-0000-000000000022', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/maxi-dress.jpg'),
+('c0000000-0000-0000-0000-000000000023', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/sneakers.jpg'),
+('c0000000-0000-0000-0000-000000000024', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/leather-bag.jpg'),
+('c0000000-0000-0000-0000-000000000025', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/sunglasses.jpg'),
+
+-- Dữ liệu
+('c0000000-0000-0000-0000-000000000026', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/formal-shirt.jpg'),
+('c0000000-0000-0000-0000-000000000027', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/heels.jpg'),
+('c0000000-0000-0000-0000-000000000028', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/t-shirt.jpg'),
+('c0000000-0000-0000-0000-000000000029', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/handbag.jpg'),
+('c0000000-0000-0000-0000-000000000030', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/slippers.jpg'),
+('c0000000-0000-0000-0000-000000000031', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/sofa.jpg'),
+('c0000000-0000-0000-0000-000000000032', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/refrigerator.jpg'),
+('c0000000-0000-0000-0000-000000000033', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/vacuum-cleaner.jpg'),
+('c0000000-0000-0000-0000-000000000034', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/cookware.jpg'),
+('c0000000-0000-0000-0000-000000000035', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/dinnerware.jpg'),
+('c0000000-0000-0000-0000-000000000036', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/mattress.jpg'),
+('c0000000-0000-0000-0000-000000000037', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/table-lamp.jpg'),
+('c0000000-0000-0000-0000-000000000038', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/rug.jpg'),
+('c0000000-0000-0000-0000-000000000039', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/storage-boxes.jpg'),
+('c0000000-0000-0000-0000-000000000040', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/cleaning-supplies.jpg'),
+('c0000000-0000-0000-0000-000000000041', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/treadmill.jpg'),
+('c0000000-0000-0000-0000-000000000042', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/dumbbells.jpg'),
+('c0000000-0000-0000-0000-000000000043', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/protein-powder.jpg'),
+('c0000000-0000-0000-0000-000000000044', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/blood-pressure-monitor.jpg'),
+('c0000000-0000-0000-0000-000000000045', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/first-aid-kit.jpg'),
+('c0000000-0000-0000-0000-000000000046', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/hand-sanitizer.jpg'),
+('c0000000-0000-0000-0000-000000000047', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/gloves.jpg'),
+('c0000000-0000-0000-0000-000000000048', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/thermometer.jpg'),
+('c0000000-0000-0000-0000-000000000049', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/yoga-mat.jpg'),
+('c0000000-0000-0000-0000-000000000050', 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/images/products/knee-pads.jpg');
+
 
 -- =====================================================================================
 -- DATABASE: db_inventory
@@ -175,7 +199,9 @@ INSERT INTO hinh_anh (product_id, image_url) VALUES
 USE db_inventory;
 
 -- --------------------------------------------------------
--- 4. BẢNG TỒN KHO (INVENTORY) - Chèn tự động cho toàn bộ sản phẩm
+-- 4. BẢNG TỒN KHO (INVENTORY)
+-- Câu lệnh siêu cấp này sẽ quét toàn bộ sản phẩm bên db_product
+-- và tự động chèn tồn kho (100 cái) cho mọi sản phẩm!
 -- --------------------------------------------------------
 INSERT INTO inventory (id, product_id, available_quantity, reserved_quantity, low_stock_threshold, created_at, updated_at, version)
 SELECT UUID(), id, 100, 0, 10, NOW(), NOW(), 0 FROM db_product.product;

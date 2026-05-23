@@ -3,12 +3,13 @@ package com.oms.ai.config;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.embedding.onnx.allminilml6v2.AllMiniLmL6V2EmbeddingModel;
+import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.redis.RedisEmbeddingStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 
@@ -43,9 +44,14 @@ public class AiConfig {
     }
 
     @Bean
+    @Primary
     public EmbeddingModel embeddingModel() {
-        // Sử dụng mô hình chạy offline cực nhẹ và miễn phí để nhúng văn bản sản phẩm (AllMiniLmL6V2)
-        return new AllMiniLmL6V2EmbeddingModel();
+        // Sử dụng mô hình nhúng đa ngôn ngữ của Google để hiểu ngữ nghĩa Tiếng Việt xuất sắc
+        return GoogleAiEmbeddingModel.builder()
+                .apiKey(geminiApiKey)
+                .modelName("gemini-embedding-001")
+                .outputDimensionality(768)
+                .build();
     }
 
     @Bean
@@ -54,7 +60,7 @@ public class AiConfig {
                 .host(redisHost)
                 .port(redisPort)
                 .indexName("oms_products")
-                .dimension(384) // Kích thước Vector của AllMiniLmL6V2 là 384
+                .dimension(768) // Kích thước Vector của Google text-embedding-004 là 768
                 .metadataKeys(java.util.Arrays.asList("productId", "productName", "price", "description", "stockQuantity"))
                 .build();
     }

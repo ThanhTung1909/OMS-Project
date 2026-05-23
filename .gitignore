@@ -35,3 +35,6 @@ build/
 
 ### Maven Wrapper ###
 .mvn/
+
+### Environment Variables ###
+.env

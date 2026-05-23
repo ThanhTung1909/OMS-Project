@@ -30,6 +30,7 @@
         <module>notification-service</module>
         <module>profile-service</module>
         <module>orchestrator-service</module>
+        <module>ai-service</module>
     </modules>
 
     <properties>

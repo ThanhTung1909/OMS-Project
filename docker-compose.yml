@@ -25,10 +25,11 @@ services:
 
   # --- Cache Service ---
   redis:
-    image: redis:alpine
+    image: redis/redis-stack:latest
     container_name: oms-redis
     ports:
       - "6379:6379"
+      - "8001:8001"
     networks:
       - oms-network
 
@@ -353,6 +354,34 @@ services:
         condition: service_started
     volumes:
       - ./backend/orchestrator-service/target/classes:/app/target/classes
+      - ./backend/common-library/target/classes:/common-library/target/classes
+    networks:
+      - oms-network
+
+  ai-service:
+    build:
+      context: ./backend
+      dockerfile: ai-service/Dockerfile
+    container_name: oms-ai
+    environment:
+      - SPRING_DEVTOOLS_RESTART_ENABLED=true
+      - SPRING_DEVTOOLS_RESTART_POLL_INTERVAL=2s
+      - SPRING_DEVTOOLS_RESTART_QUIET_PERIOD=1s
+      - SPRING_DEVTOOLS_RESTART_ADDITIONAL_PATHS=/app/target/classes,/common-library/target/classes
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=user
+      - SPRING_RABBITMQ_PASSWORD=password
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_AI_GEMINI_API_KEY=${SPRING_AI_GEMINI_API_KEY:-AIzaSyDIn5zAxtXGoFHAuov4hm_nb8hztoT6-MA}
+    depends_on:
+      - discovery-server
+      - rabbitmq
+      - redis
+    volumes:
+      - ./backend/ai-service/target/classes:/app/target/classes
       - ./backend/common-library/target/classes:/common-library/target/classes
     networks:
       - oms-network

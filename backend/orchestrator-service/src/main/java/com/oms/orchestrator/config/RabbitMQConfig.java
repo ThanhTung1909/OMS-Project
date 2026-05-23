@@ -18,6 +18,7 @@ public class RabbitMQConfig {
     public static final String QUEUE_ORCHESTRATOR_PAYMENT_REPLY = "q.orchestrator.payment.reply";
     public static final String QUEUE_ORCHESTRATOR_DELIVERY_REPLY = "q.orchestrator.delivery.reply";
     public static final String QUEUE_ORCHESTRATOR_PAYMENT_URL = "q.orchestrator.payment.url";
+    public static final String QUEUE_ORCHESTRATOR_AI_REPLY = "q.orchestrator.ai.reply";
 
     @Bean
     public TopicExchange omsExchange() {
@@ -50,6 +51,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue aiReplyQueue() {
+        return new Queue(QUEUE_ORCHESTRATOR_AI_REPLY, true);
+    }
+
+    @Bean
     public Binding bindingOrderCreated(Queue orderCreatedQueue, TopicExchange omsExchange) {
         return BindingBuilder.bind(orderCreatedQueue).to(omsExchange).with(RabbitMQConstants.RK_ORDER_EVENT_CREATED);
     }
@@ -72,6 +78,11 @@ public class RabbitMQConfig {
     @Bean
     public Binding bindingDeliveryReply(Queue deliveryReplyQueue, TopicExchange omsExchange) {
         return BindingBuilder.bind(deliveryReplyQueue).to(omsExchange).with(RabbitMQConstants.DELIVERY_STATUS_UPDATE);
+    }
+
+    @Bean
+    public Binding bindingAiReply(Queue aiReplyQueue, TopicExchange omsExchange) {
+        return BindingBuilder.bind(aiReplyQueue).to(omsExchange).with(RabbitMQConstants.AI_REPLY_CHECK_FRAUD);
     }
 
     @Bean

@@ -51,11 +51,12 @@ public class OrderController {
         OrderResponse result = orderService.getOrder(orderId);
         
         if ("CANCELLED".equals(result.getStatus())) {
+            String displayMsg = result.getErrorMessage() != null ? result.getErrorMessage() : "Giao dịch thanh toán thất bại";
             return ResponseEntity.badRequest().body(
                 ApiResponse.<OrderResponse>builder()
                     .success(false)
                     .status(HttpStatus.BAD_REQUEST.value())
-                    .message("Giao dịch thanh toán thất bại")
+                    .message(displayMsg)
                     .result(result)
                     .build()
             );

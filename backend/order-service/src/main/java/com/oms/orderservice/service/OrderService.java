@@ -227,11 +227,16 @@ public class OrderService {
             BeanUtils.copyProperties(order.getShippingAddress(), addrResponse);
         }
 
+        String displayMsg = "Chi tiết đơn hàng #" + order.getId();
+        if (order.getStatus() == OrderStatus.CANCELLED && order.getErrorMessage() != null) {
+            displayMsg = order.getErrorMessage();
+        }
+
         return OrderResponse.builder()
                 .orderId(order.getId())
                 .userId(order.getUserId())
                 .status(order.getStatus() != null ? order.getStatus().name() : "UNKNOWN")
-                .message("Chi tiết đơn hàng #" + order.getId())
+                .message(displayMsg)
                 .totalAmount(order.getTotalAmount())
                 .paymentId(order.getPaymentId())
                 .deliveryId(order.getDeliveryId())

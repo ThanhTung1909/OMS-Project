@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import com.oms.common.constant.RedisConstants;
+import com.oms.productservice.client.InventoryClient;
 
 import java.util.Collections;
 import java.util.List;
@@ -38,6 +39,10 @@ public class ProductService {
     @Autowired
     @Lazy
     private ProductService self;
+
+    @Autowired
+    @Lazy
+    private InventoryClient inventoryClient;
 
     @Transactional
     public ProductResponse createProduct(ProductRequest request){
@@ -184,17 +189,49 @@ public class ProductService {
             // 2. Chọc 1 phát vào Redis lấy ra cả 1 mảng số lượng (High Performance)
             List<String> stocks = stringRedisTemplate.opsForValue().multiGet(redisKeys);
 
-            // 3. Map ngược lại vào ProductResponse
+            // 3. Map ngược lại vào ProductResponse, thu gom danh sách sản phẩm bị lỡ cache
+            List<ProductResponse> missingCacheProducts = new java.util.ArrayList<>();
             if (stocks != null) {
                 for (int i = 0; i < products.size(); i++) {
                     String stockStr = stocks.get(i);
-                    int stockQty = (stockStr != null) ? Integer.parseInt(stockStr) : 0;
-                    products.get(i).setStockQuantity(stockQty);
+                    if (stockStr != null) {
+                        products.get(i).setStockQuantity(Integer.parseInt(stockStr));
+                    } else {
+                        missingCacheProducts.add(products.get(i));
+                    }
+                }
+            } else {
+                missingCacheProducts.addAll(products);
+            }
+
+            // 4. Nếu có sản phẩm lỡ cache, gọi FeignClient sang inventory-service để lấy tồn kho thực tế & nạp lại vào Redis
+            if (!missingCacheProducts.isEmpty()) {
+                log.info("Phát hiện {} sản phẩm lỡ cache tồn kho. Gọi FeignClient sang inventory-service...", missingCacheProducts.size());
+                List<String> missingIds = missingCacheProducts.stream().map(ProductResponse::getId).collect(Collectors.toList());
+                ApiResponse<Map<String, Integer>> response = inventoryClient.getBulkStock(missingIds);
+                if (response != null && response.isSuccess() && response.getResult() != null) {
+                    Map<String, Integer> stockMap = response.getResult();
+                    for (ProductResponse p : missingCacheProducts) {
+                        int stockQty = stockMap.getOrDefault(p.getId(), 0);
+                        p.setStockQuantity(stockQty);
+                        
+                        // Nạp lại vào Redis để ấm cache lần sau
+                        try {
+                            String redisKey = RedisConstants.PREFIX_INVENTORY_STOCK + p.getId();
+                            stringRedisTemplate.opsForValue().set(redisKey, String.valueOf(stockQty));
+                        } catch (Exception redisEx) {
+                            log.warn("Không thể ghi đè cache tồn kho cho sản phẩm {}: {}", p.getId(), redisEx.getMessage());
+                        }
+                    }
+                } else {
+                    log.warn("Gọi bulk-stock thất bại hoặc trống. Mặc định tồn kho bằng 0 cho các sản phẩm lỡ cache.");
+                    missingCacheProducts.forEach(p -> p.setStockQuantity(0));
                 }
             }
-            log.info("Đã enrich tồn kho cho {} sản phẩm từ Redis.", products.size());
+            
+            log.info("Đã enrich tồn kho cho {} sản phẩm.", products.size());
         } catch (Exception e) {
-            log.error("Lỗi khi lấy tồn kho từ Redis: {}. Fallback về 0.", e.getMessage());
+            log.error("Lỗi khi lấy tồn kho: {}. Fallback về 0.", e.getMessage());
             products.forEach(p -> p.setStockQuantity(0));
         }
     }

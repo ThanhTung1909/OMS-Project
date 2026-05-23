@@ -144,22 +144,45 @@ public class PaymentService {
         StringBuilder query = new StringBuilder();
         Iterator itr = fieldNames.iterator();
         while (itr.hasNext()) {
+            List fieldNames = new ArrayList(vnp_Params.keySet());
+        Collections.sort(fieldNames);
+        StringBuilder hashData = new StringBuilder();
+        StringBuilder query = new StringBuilder();
+        Iterator itr = fieldNames.iterator();
+        
+        while (itr.hasNext()) {
             String fieldName = (String) itr.next();
             String fieldValue = (String) vnp_Params.get(fieldName);
             if ((fieldValue != null) && (fieldValue.length() > 0)) {
-                // Build hash data
-                hashData.append(fieldName);
-                hashData.append('=');
-                hashData.append(java.net.URLEncoder.encode(fieldValue, java.nio.charset.StandardCharsets.US_ASCII));
-                // Build query
-                query.append(java.net.URLEncoder.encode(fieldName, java.nio.charset.StandardCharsets.US_ASCII));
-                query.append('=');
-                query.append(java.net.URLEncoder.encode(fieldValue, java.nio.charset.StandardCharsets.US_ASCII));
-                if (itr.hasNext()) {
-                    query.append('&');
-                    hashData.append('&');
+                try {
+                    // 1. CHUẨN HÓA VNPAY: Dùng UTF-8 và thay thế dấu '+' thành '%20'
+                    String encodedValue = java.net.URLEncoder.encode(fieldValue, java.nio.charset.StandardCharsets.UTF_8.toString()).replace("+", "%20");
+                    String encodedName = java.net.URLEncoder.encode(fieldName, java.nio.charset.StandardCharsets.UTF_8.toString()).replace("+", "%20");
+
+                    // 2. Build hash data (Chỉ encode Value)
+                    hashData.append(fieldName);
+                    hashData.append('=');
+                    hashData.append(encodedValue);
+
+                    // 3. Build query (Encode cả Name và Value)
+                    query.append(encodedName);
+                    query.append('=');
+                    query.append(encodedValue);
+
+                    if (itr.hasNext()) {
+                        query.append('&');
+                        hashData.append('&');
+                    }
+                } catch (Exception e) {
+                    log.error("Lỗi encode VNPAY URL: {}", e.getMessage());
                 }
             }
+        }
+        
+        String queryUrl = query.toString();
+        String vnp_SecureHash = vnpayConfig.hmacSHA512(vnpayConfig.getVnp_HashSecret(), hashData.toString());
+        queryUrl += "&vnp_SecureHash=" + vnp_SecureHash;
+        return vnpayConfig.getVnp_PayUrl() + "?" + queryUrl;
         }
         String queryUrl = query.toString();
         String vnp_SecureHash = vnpayConfig.hmacSHA512(vnpayConfig.getVnp_HashSecret(), hashData.toString());

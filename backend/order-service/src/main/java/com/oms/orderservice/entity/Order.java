@@ -30,6 +30,7 @@ public class Order {
     private String paymentMethod;
     @Column(length = 1000)
     private String paymentUrl;
+    @Column(length = 1000)
     private String errorMessage;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

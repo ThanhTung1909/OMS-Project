@@ -1,0 +1,36 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: ai-service
+  
+  # RabbitMQ Config
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:user}
+    password: ${SPRING_RABBITMQ_PASSWORD:password}
+
+  # Redis Configuration for caching and Vector store metadata
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+
+# Eureka Discovery Client Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+# Langchain4j Configurations
+langchain4j:
+  google:
+    ai:
+      gemini:
+        api-key: ${SPRING_AI_GEMINI_API_KEY:AIzaSyDIn5zAxtXGoFHAuov4hm_nb8hztoT6-MA}
+        model-name: ${SPRING_AI_GEMINI_MODEL:gemini-2.5-flash}
+        temperature: 0.2

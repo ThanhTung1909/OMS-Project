@@ -54,22 +54,103 @@ public class SagaStateMachineManager {
                 .build();
         sagaInstanceRepository.save(saga);
 
-        // Bước 1: Giữ hàng trong kho (Reserve Inventory)
+        // Tạo FraudCheckCommand để gửi sang AI Service
+        List<FraudCheckCommand.OrderItemDto> orderItems = event.getItems().stream()
+                .map(item -> FraudCheckCommand.OrderItemDto.builder()
+                        .productId(item.getProductId())
+                        .productName(item.getProductName())
+                        .price(item.getPrice())
+                        .quantity(item.getQuantity())
+                        .build())
+                .toList();
+
+        FraudCheckCommand fraudCmd = FraudCheckCommand.builder()
+                .orderId(event.getOrderId())
+                .userId(event.getUserId())
+                .totalAmount(event.getTotalAmount())
+                .receiverName(event.getReceiverName())
+                .receiverPhone(event.getReceiverPhone())
+                .address(event.getAddress())
+                .paymentMethod(event.getPaymentMethod())
+                .items(orderItems)
+                .build();
+
+        // Bước 1: Gửi lệnh kiểm tra gian lận bằng AI (AI Fraud Check)
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                event.getItems().forEach(item -> {
-                    InventoryCommand command = InventoryCommand.builder()
-                            .orderId(event.getOrderId())
-                            .productId(item.getProductId())
-                            .quantity(item.getQuantity())
-                            .type("RESERVE")
-                            .build();
-                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_RESERVE, command);
-                });
-                log.info("[ORCHESTRATOR] Đã gửi lệnh giữ hàng (RESERVE) cho đơn hàng: {}", event.getOrderId());
+                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.AI_COMMAND_CHECK_FRAUD, fraudCmd);
+                log.info("[ORCHESTRATOR] Đã gửi lệnh kiểm tra gian lận bằng AI (AI_CHECK_FRAUD) cho đơn hàng: {}", event.getOrderId());
             }
         });
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_ORCHESTRATOR_AI_REPLY)
+    @Transactional
+    public void handleAiFraudReply(FraudCheckReply reply) {
+        log.info("[ORCHESTRATOR] Nhận phản hồi kiểm tra gian lận từ AI cho đơn hàng: {}, Trạng thái: {}, Điểm rủi ro: {}", 
+                reply.getOrderId(), reply.getStatus(), reply.getFraudScore());
+
+        SagaInstance saga = sagaInstanceRepository.findByOrderId(reply.getOrderId())
+                .orElse(null);
+
+        if (saga == null) return;
+
+        // Idempotency: Chỉ xử lý khi Saga đang ở trạng thái STARTED
+        if (saga.getCurrentStep() != SagaStatus.STARTED) {
+            log.warn("[ORCHESTRATOR] Đơn hàng {} đang ở bước {}. Bỏ qua phản hồi từ AI.", 
+                    saga.getOrderId(), saga.getCurrentStep());
+            return;
+        }
+
+        if ("SAFE".equalsIgnoreCase(reply.getStatus())) {
+            log.info("[ORCHESTRATOR] Đơn hàng {} AN TOÀN. Tiến hành gửi lệnh giữ hàng (RESERVE) trong kho.", reply.getOrderId());
+            
+            try {
+                OrderCreatedEvent originalEvent = objectMapper.readValue(saga.getPayload(), OrderCreatedEvent.class);
+                
+                // Gửi lệnh giữ hàng (RESERVE) cho Inventory Service
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        originalEvent.getItems().forEach(item -> {
+                            InventoryCommand command = InventoryCommand.builder()
+                                    .orderId(originalEvent.getOrderId())
+                                    .productId(item.getProductId())
+                                    .quantity(item.getQuantity())
+                                    .type("RESERVE")
+                                    .build();
+                            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_RESERVE, command);
+                        });
+                        log.info("[ORCHESTRATOR] Đã gửi lệnh giữ hàng (RESERVE) cho đơn hàng: {}", originalEvent.getOrderId());
+                    }
+                });
+            } catch (JsonProcessingException e) {
+                log.error("[ORCHESTRATOR] Lỗi khi giải mã payload ban đầu cho đơn hàng: {}", saga.getOrderId(), e);
+            }
+        } else {
+            log.error("[ORCHESTRATOR] Đơn hàng {} NGUY HIỂM (Gian lận). Lý do: {}. Tiến hành hủy đơn ngay lập tức.", 
+                    reply.getOrderId(), reply.getReason());
+            
+            saga.setCurrentStep(SagaStatus.FAILED);
+            sagaInstanceRepository.save(saga);
+
+            // Gửi lệnh hủy đơn về Order Service với lý do chi tiết bằng ngôn ngữ tự nhiên
+            OrderStatusUpdateCommand updateCmd = OrderStatusUpdateCommand.builder()
+                    .orderId(saga.getOrderId())
+                    .newStatus(OrderStatus.CANCELLED)
+                    .message("Hủy tự động bởi hệ thống AI: " + reply.getReason())
+                    .errorMessage("Hủy tự động bởi hệ thống AI: " + reply.getReason())
+                    .build();
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
+                    log.info("[ORCHESTRATOR] Đã gửi lệnh hủy đơn hàng (Gian lận) sang Order Service: {}", saga.getOrderId());
+                }
+            });
+        }
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_ORCHESTRATOR_INVENTORY_REPLY)
@@ -253,7 +334,7 @@ public class SagaStateMachineManager {
     }
 
     /**
-     * Helper logic to trigger inventory confirmation and delivery creation
+     * Helper logic to trigger inventory confirmation and order confirmation
      */
     private void triggerSagaCompletion(SagaInstance saga, OrderCreatedEvent originalEvent, String transactionId) {
         // Bước 3a: Chốt kho (Confirm Inventory)
@@ -265,15 +346,6 @@ public class SagaStateMachineManager {
                         .type("CONFIRM")
                         .build())
                 .toList();
-
-        // Bước 3b: Tạo vận đơn giao hàng (Create Delivery)
-        DeliveryCommand deliveryCmd = DeliveryCommand.builder()
-                .orderId(saga.getOrderId())
-                .receiverName(originalEvent.getReceiverName())
-                .receiverPhone(originalEvent.getReceiverPhone())
-                .address(originalEvent.getAddress())
-                .codAmount("COD".equalsIgnoreCase(originalEvent.getPaymentMethod()) ? originalEvent.getTotalAmount() : java.math.BigDecimal.ZERO)
-                .build();
 
         // Cập nhật trạng thái đơn hàng sang CONFIRMED
         OrderStatusUpdateCommand updateCmd = OrderStatusUpdateCommand.builder()
@@ -288,8 +360,6 @@ public class SagaStateMachineManager {
             public void afterCommit() {
                 inventoryCommands.forEach(cmd -> 
                     rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.INVENTORY_COMMAND_CONFIRM, cmd));
-                
-                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.DELIVERY_COMMAND_CREATE, deliveryCmd);
                 
                 rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, RabbitMQConstants.RK_ORDER_COMMAND_UPDATE, updateCmd);
                 

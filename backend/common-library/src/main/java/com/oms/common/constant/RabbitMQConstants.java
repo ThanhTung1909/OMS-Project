@@ -34,6 +34,10 @@ public class RabbitMQConstants {
     public static final String NOTIFICATION_ORDER_STATUS = "notification.order.status";
     public static final String NOTIFICATION_STOCK_LOW = "notification.stock.low";
 
+    // AI
+    public static final String AI_COMMAND_CHECK_FRAUD = "ai.command.check_fraud";
+    public static final String AI_REPLY_CHECK_FRAUD = "ai.reply.check_fraud";
+
     private RabbitMQConstants() {
         // Prevent instantiation
     }

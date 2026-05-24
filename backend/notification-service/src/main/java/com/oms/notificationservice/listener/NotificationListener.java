@@ -164,4 +164,34 @@ public class NotificationListener {
             log.error("Lỗi khi gửi email khôi phục mật khẩu: {}", e.getMessage());
         }
     }
+
+    /**
+     * Lắng nghe cảnh báo sắp hết hàng hoặc hết hàng (Low Stock Alert) gửi cho admin
+     */
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_NOTIFICATION_STOCK_LOW)
+    public void handleLowStockAlert(NotificationEvent event) {
+        log.info("[ADMIN ALERT] Nhận cảnh báo tồn kho: {}", event.getMessage());
+        
+        try {
+            // 1. Lưu In-App Notification cho admin
+            String adminUserId = "admin";
+            com.oms.notificationservice.entity.NotificationLog logEntry = com.oms.notificationservice.entity.NotificationLog.builder()
+                    .userId(adminUserId)
+                    .title("CẢNH BÁO TỒN KHO")
+                    .content(event.getMessage())
+                    .build();
+            notificationLogRepository.save(logEntry);
+            log.info("Đã lưu In-App Notification (Low Stock Alert) cho admin");
+            
+            // 2. Gửi Email tới email của Admin mặc định (admin@oms.com)
+            String adminEmail = "admin@oms.com";
+            String subject = "CẢNH BÁO: Tồn kho thấp / Hết hàng";
+            
+            emailService.sendEmail(adminEmail, subject, event.getMessage());
+            log.info("Đã gửi email cảnh báo tồn kho tới admin (admin@oms.com) thành công.");
+            
+        } catch (Exception e) {
+            log.error("Lỗi khi xử lý thông báo cảnh báo tồn kho cho admin: {}", e.getMessage());
+        }
+    }
 }

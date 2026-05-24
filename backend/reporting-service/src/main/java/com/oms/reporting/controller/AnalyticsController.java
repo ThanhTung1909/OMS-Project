@@ -1,6 +1,7 @@
 package com.oms.reporting.controller;
 
 import com.oms.reporting.client.InventoryClient;
+import com.oms.reporting.client.ProductClient;
 import com.oms.reporting.entity.DailyRevenueStatistics;
 import com.oms.reporting.entity.ProductSalesStatistics;
 import com.oms.reporting.entity.ShipperPerformanceStatistics;
@@ -27,6 +28,7 @@ public class AnalyticsController {
     private final ProductSalesRepository productSalesRepository;
     private final ShipperPerformanceRepository shipperPerformanceRepository;
     private final InventoryClient inventoryClient;
+    private final ProductClient productClient;
 
     @GetMapping("/summary")
     public ResponseEntity<Map<String, Object>> getDashboardSummary() {
@@ -52,7 +54,7 @@ public class AnalyticsController {
             }
         } catch (Exception e) {
             summary.put("lowStockItemsCount", 0);
-            summary.put("lowStockError", "Failed to fetch inventory alerts");
+            summary.put("lowStockError", "Failed to fetch inventory alerts: " + e.getMessage());
         }
 
         return ResponseEntity.ok(summary);
@@ -101,8 +103,22 @@ public class AnalyticsController {
     @GetMapping("/inventory-alerts")
     public ResponseEntity<List<Map<String, Object>>> getInventoryAlerts() {
         var response = inventoryClient.getLowStockAlerts();
-        if (response != null && response.isSuccess()) {
-            return ResponseEntity.ok(response.getResult());
+        if (response != null && response.isSuccess() && response.getResult() != null) {
+            List<Map<String, Object>> alerts = response.getResult();
+            for (Map<String, Object> alert : alerts) {
+                String productId = (String) alert.get("productId");
+                if (productId != null) {
+                    try {
+                        var productResponse = productClient.getProductById(productId);
+                        if (productResponse != null && productResponse.isSuccess() && productResponse.getResult() != null) {
+                            alert.put("product", productResponse.getResult());
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Failed to fetch product " + productId + " for inventory-alerts: " + e.getMessage());
+                    }
+                }
+            }
+            return ResponseEntity.ok(alerts);
         }
         return ResponseEntity.ok(List.of());
     }

@@ -12,6 +12,7 @@ import com.oms.inventoryservice.repository.InventoryRepository;
 import com.oms.inventoryservice.repository.ProcessedEventRepository;
 import com.oms.inventoryservice.entity.InventoryAuditLog;
 import com.oms.inventoryservice.repository.InventoryAuditLogRepository;
+import com.oms.inventoryservice.service.InventoryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -46,6 +47,9 @@ public class InventoryEventListener {
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
+    @Autowired
+    private InventoryService inventoryService;
+
     /**
      * Xử lý lệnh giữ hàng (RESERVE) từ Orchestrator
      */
@@ -74,7 +78,10 @@ public class InventoryEventListener {
             // 3. Thực hiện giữ hàng (Reserve)
             inventory.setAvailableQuantity(inventory.getAvailableQuantity() - command.getQuantity());
             inventory.setReservedQuantity(inventory.getReservedQuantity() + command.getQuantity());
-            inventoryRepository.save(inventory);
+            Inventory savedInventory = inventoryRepository.save(inventory);
+
+            // Check and publish low stock alert
+            inventoryService.checkAndPublishLowStockAlert(savedInventory);
 
             // Cập nhật lên Redis (CQRS)
             updateRedisStock(inventory.getProductId(), inventory.getAvailableQuantity());

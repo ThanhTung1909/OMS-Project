@@ -200,6 +200,18 @@ public class OrderService {
         order.setStatus(OrderStatus.CANCELLED);
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
+
+        // Phát sự kiện OrderCancelledEvent sang RabbitMQ cho Reporting Service
+        try {
+            com.oms.common.dto.OrderCancelledEvent cancelledEvent = com.oms.common.dto.OrderCancelledEvent.builder()
+                    .orderId(order.getId())
+                    .cancelledAt(order.getUpdatedAt())
+                    .build();
+            rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, "order.status.cancelled", cancelledEvent);
+            log.info("[ORDER-SERVICE] Khách hàng chủ động hủy đơn. Đã phát sự kiện OrderCancelledEvent cho đơn hàng {}", order.getId());
+        } catch (Exception e) {
+            log.error("[ORDER-SERVICE] Lỗi khi phát sự kiện OrderCancelledEvent lên RabbitMQ: {}", e.getMessage());
+        }
     }
 
     public OrderResponse getOrder(String orderId) {

@@ -24,7 +24,7 @@ public class DeliveryEventListener {
 
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(value = "reporting.delivery.status.queue", durable = "true"),
-            exchange = @Exchange(value = "delivery.exchange", type = "topic", ignoreDeclarationExceptions = "true"),
+            exchange = @Exchange(value = "oms.exchange", type = "topic", ignoreDeclarationExceptions = "true"),
             key = "delivery.status.update"
     ))
     @Transactional

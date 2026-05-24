@@ -17,4 +17,6 @@ public class DeliveryUpdatePayload {
     private String trackingNumber;
     private String shipperName;
     private String shipperPhone;
+    private java.time.LocalDateTime createdAt;
+    private java.time.LocalDateTime updatedAt;
 }

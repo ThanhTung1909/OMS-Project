@@ -111,7 +111,7 @@ public class PaymentService {
         String vnp_IpAddr = "127.0.0.1";
         String vnp_TmnCode = vnpayConfig.getVnp_TmnCode();
 
-        int amountInVnd = amount.multiply(new BigDecimal(100)).intValue();
+        long amountInVnd = amount.multiply(new BigDecimal(100)).longValue();
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", vnp_Version);
         vnp_Params.put("vnp_Command", vnp_Command);
@@ -138,27 +138,28 @@ public class PaymentService {
         String vnp_ExpireDate = formatter.format(cld.getTime());
         vnp_Params.put("vnp_ExpireDate", vnp_ExpireDate);
 
-        List fieldNames = new ArrayList(vnp_Params.keySet());
+        List<String> fieldNames = new ArrayList<>(vnp_Params.keySet());
         Collections.sort(fieldNames);
         StringBuilder hashData = new StringBuilder();
         StringBuilder query = new StringBuilder();
-        Iterator itr = fieldNames.iterator();
-        while (itr.hasNext()) {
-            String fieldName = (String) itr.next();
-            String fieldValue = (String) vnp_Params.get(fieldName);
+        boolean first = true;
+        
+        for (String fieldName : fieldNames) {
+            String fieldValue = vnp_Params.get(fieldName);
             if ((fieldValue != null) && (fieldValue.length() > 0)) {
-                // Build hash data
-                hashData.append(fieldName);
-                hashData.append('=');
-                hashData.append(java.net.URLEncoder.encode(fieldValue, java.nio.charset.StandardCharsets.US_ASCII));
-                // Build query
-                query.append(java.net.URLEncoder.encode(fieldName, java.nio.charset.StandardCharsets.US_ASCII));
-                query.append('=');
-                query.append(java.net.URLEncoder.encode(fieldValue, java.nio.charset.StandardCharsets.US_ASCII));
-                if (itr.hasNext()) {
+                if (!first) {
                     query.append('&');
                     hashData.append('&');
                 }
+                first = false;
+                // Build hash data
+                hashData.append(fieldName);
+                hashData.append('=');
+                hashData.append(java.net.URLEncoder.encode(fieldValue, java.nio.charset.StandardCharsets.UTF_8));
+                // Build query
+                query.append(java.net.URLEncoder.encode(fieldName, java.nio.charset.StandardCharsets.UTF_8).replaceAll("\\+", "%20"));
+                query.append('=');
+                query.append(java.net.URLEncoder.encode(fieldValue, java.nio.charset.StandardCharsets.UTF_8).replaceAll("\\+", "%20"));
             }
         }
         String queryUrl = query.toString();

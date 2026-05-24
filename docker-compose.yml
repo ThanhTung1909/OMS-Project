@@ -260,6 +260,10 @@ services:
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=user
       - SPRING_RABBITMQ_PASSWORD=password
+      - SPRING_VNPAY_TMN_CODE=${VNPAY_TMN_CODE}
+      - SPRING_VNPAY_HASH_SECRET=${VNPAY_HASH_SECRET}
+      - SPRING_VNPAY_RETURN_URL=${VNPAY_RETURN_URL}
+      - SPRING_VNPAY_PAY_URL=${VNPAY_PAY_URL}
     depends_on:
       mariadb:
         condition: service_healthy

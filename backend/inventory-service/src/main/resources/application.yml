@@ -23,7 +23,7 @@ spring:
         password: ${SPRING_RABBITMQ_PASSWORD:password}
         listener:
             simple:
-                acknowledge-mode: manual
+                acknowledge-mode: auto
                 max-concurrency: 3
                 prefetch: 10
 eureka:

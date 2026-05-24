@@ -1,6 +1,9 @@
 package com.oms.orderservice.service;
 
+import com.oms.common.constant.RabbitMQConstants;
 import com.oms.common.dto.DeliveryUpdatePayload;
+import com.oms.common.dto.InventoryCommand;
+import com.oms.common.dto.NotificationEvent;
 import com.oms.common.dto.OrderStatusUpdateCommand;
 import com.oms.common.enums.OrderStatus;
 import com.oms.orderservice.config.RabbitMQConfig;
@@ -9,6 +12,7 @@ import com.oms.orderservice.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +24,7 @@ import java.time.LocalDateTime;
 public class OrderCommandHandler {
 
     private final OrderRepository orderRepository;
+    private final RabbitTemplate rabbitTemplate;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_ORDER_COMMAND_UPDATE)
     @Transactional
@@ -60,6 +65,24 @@ public class OrderCommandHandler {
 
         orderRepository.save(order);
         log.info("[ORDER-SERVICE] Đã cập nhật đơn hàng {} sang trạng thái {}", order.getId(), order.getStatus());
+
+        // Phát sự kiện thông báo trạng thái đơn hàng sang RabbitMQ
+        try {
+            NotificationEvent notifyEvent = NotificationEvent.builder()
+                    .orderId(order.getId())
+                    .userId(order.getUserId())
+                    .status(order.getStatus().name())
+                    .message("Đơn hàng của bạn đã chuyển sang trạng thái: " + order.getStatus().name())
+                    .build();
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConstants.EXCHANGE_NAME, 
+                    RabbitMQConstants.NOTIFICATION_ORDER_STATUS, 
+                    notifyEvent
+            );
+            log.info("[ORDER-SERVICE] Đã gửi thông báo trạng thái mới {} cho đơn hàng {}", order.getStatus(), order.getId());
+        } catch (Exception e) {
+            log.error("[ORDER-SERVICE] Lỗi khi gửi thông báo trạng thái đơn hàng lên RabbitMQ: {}", e.getMessage());
+        }
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_DELIVERY_STATUS)
@@ -89,6 +112,29 @@ public class OrderCommandHandler {
         } else if ("RETURNED".equals(status)) {
             order.setStatus(OrderStatus.CANCELLED);
             order.setErrorMessage("Giao hàng thất bại: " + payload.getFailReason());
+
+            // Hoàn lại kho cho đơn giao hàng không thành công (RETURNED)
+            try {
+                if (order.getOrderItems() != null) {
+                    order.getOrderItems().forEach(item -> {
+                        InventoryCommand command = InventoryCommand.builder()
+                                .orderId(order.getId())
+                                .productId(item.getProductId())
+                                .quantity(item.getQuantity())
+                                .type("ROLLBACK")
+                                .build();
+                        rabbitTemplate.convertAndSend(
+                                RabbitMQConstants.EXCHANGE_NAME, 
+                                RabbitMQConstants.INVENTORY_COMMAND_ROLLBACK, 
+                                command
+                        );
+                        log.info("[ORDER-SERVICE] Đã gửi lệnh hoàn kho ROLLBACK cho đơn giao hàng thất bại. Đơn: {}, Sản phẩm: {}, Số lượng: {}", 
+                                order.getId(), item.getProductId(), item.getQuantity());
+                    });
+                }
+            } catch (Exception e) {
+                log.error("[ORDER-SERVICE] Lỗi khi gửi lệnh hoàn kho khi giao hàng thất bại: {}", e.getMessage());
+            }
         }
 
         order.setUpdatedAt(LocalDateTime.now());

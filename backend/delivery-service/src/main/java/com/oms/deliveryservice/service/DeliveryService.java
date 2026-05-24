@@ -46,6 +46,8 @@ public class DeliveryService {
                 .trackingNumber(savedDelivery.getTrackingNumber())
                 .shipperName(savedDelivery.getShipperName())
                 .shipperPhone(savedDelivery.getShipperPhone())
+                .createdAt(savedDelivery.getCreatedAt())
+                .updatedAt(savedDelivery.getUpdatedAt())
                 .build();
 
         rabbitTemplate.convertAndSend(
@@ -87,6 +89,8 @@ public class DeliveryService {
                     .trackingNumber(updatedDelivery.getTrackingNumber())
                     .shipperName(updatedDelivery.getShipperName())
                     .shipperPhone(updatedDelivery.getShipperPhone())
+                    .createdAt(updatedDelivery.getCreatedAt())
+                    .updatedAt(updatedDelivery.getUpdatedAt())
                     .build();
 
             log.info("Delivery {} for order {} changed from {} to {}. Sending status update event.",

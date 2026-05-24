@@ -217,6 +217,7 @@ public class SagaStateMachineManager {
                     .orderId(saga.getOrderId())
                     .newStatus(OrderStatus.CANCELLED)
                     .message("Kho báo lỗi: " + payload.getMessage())
+                    .errorMessage("Kho báo lỗi: " + payload.getMessage())
                     .build();
 
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {

@@ -83,6 +83,7 @@ public class OrderCommandHandler {
         } catch (Exception e) {
             log.error("[ORDER-SERVICE] Lỗi khi gửi thông báo trạng thái đơn hàng lên RabbitMQ: {}", e.getMessage());
         }
+        publishStatusEvent(order);
     }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_DELIVERY_STATUS)
@@ -139,5 +140,41 @@ public class OrderCommandHandler {
 
         order.setUpdatedAt(LocalDateTime.now());
         orderRepository.save(order);
+        publishStatusEvent(order);
+    }
+
+    private void publishStatusEvent(Order order) {
+        try {
+            if (order.getStatus() == OrderStatus.COMPLETED) {
+                java.util.List<com.oms.common.dto.OrderCompletedEvent.OrderItem> eventItems = order.getOrderItems().stream()
+                        .map(item -> com.oms.common.dto.OrderCompletedEvent.OrderItem.builder()
+                                .productId(item.getProductId())
+                                .productName(item.getProductName())
+                                .quantity(item.getQuantity())
+                                .price(item.getPrice())
+                                .build())
+                        .collect(java.util.stream.Collectors.toList());
+
+                com.oms.common.dto.OrderCompletedEvent completedEvent = com.oms.common.dto.OrderCompletedEvent.builder()
+                        .orderId(order.getId())
+                        .totalAmount(order.getTotalAmount())
+                        .paymentMethod(order.getPaymentMethod())
+                        .items(eventItems)
+                        .build();
+
+                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, "order.status.completed", completedEvent);
+                log.info("[ORDER-SERVICE] Đã phát sự kiện OrderCompletedEvent cho đơn hàng {}", order.getId());
+            } else if (order.getStatus() == OrderStatus.CANCELLED) {
+                com.oms.common.dto.OrderCancelledEvent cancelledEvent = com.oms.common.dto.OrderCancelledEvent.builder()
+                        .orderId(order.getId())
+                        .cancelledAt(order.getUpdatedAt() != null ? order.getUpdatedAt() : LocalDateTime.now())
+                        .build();
+
+                rabbitTemplate.convertAndSend(RabbitMQConstants.EXCHANGE_NAME, "order.status.cancelled", cancelledEvent);
+                log.info("[ORDER-SERVICE] Đã phát sự kiện OrderCancelledEvent cho đơn hàng {}", order.getId());
+            }
+        } catch (Exception e) {
+            log.error("[ORDER-SERVICE] Lỗi khi phát sự kiện báo cáo (hoàn tất/hủy) đơn hàng: {}", e.getMessage(), e);
+        }
     }
 }

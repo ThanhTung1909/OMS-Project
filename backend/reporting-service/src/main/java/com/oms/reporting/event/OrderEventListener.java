@@ -29,7 +29,7 @@ public class OrderEventListener {
 
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(value = "reporting.order.completed.queue", durable = "true"),
-            exchange = @Exchange(value = "order.exchange", type = "topic", ignoreDeclarationExceptions = "true"),
+            exchange = @Exchange(value = "oms.exchange", type = "topic", ignoreDeclarationExceptions = "true"),
             key = "order.status.completed"
     ))
     @Transactional
@@ -74,7 +74,7 @@ public class OrderEventListener {
 
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(value = "reporting.order.cancelled.queue", durable = "true"),
-            exchange = @Exchange(value = "order.exchange", type = "topic", ignoreDeclarationExceptions = "true"),
+            exchange = @Exchange(value = "oms.exchange", type = "topic", ignoreDeclarationExceptions = "true"),
             key = "order.status.cancelled"
     ))
     @Transactional

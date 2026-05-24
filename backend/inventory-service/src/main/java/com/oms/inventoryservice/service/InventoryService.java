@@ -18,6 +18,9 @@ import com.oms.inventoryservice.client.ProductClient;
 import com.oms.inventoryservice.entity.InventoryAuditLog;
 import com.oms.inventoryservice.repository.InventoryAuditLogRepository;
 import com.oms.common.ApiResponse;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import com.oms.common.dto.NotificationEvent;
+import com.oms.common.constant.RabbitMQConstants;
 import java.util.Optional;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +41,9 @@ public class InventoryService {
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
     /**
      * Cập nhật số lượng tồn kho theo loại
@@ -139,6 +145,9 @@ public class InventoryService {
         Inventory updatedInventory = inventoryRepository.save(inventory);
         log.info("Inventory updated successfully for product: {}", request.getProductId());
 
+        // Check and publish low stock alert
+        checkAndPublishLowStockAlert(updatedInventory);
+
         // Cập nhật lên Redis (CQRS - Shared Redis)
         try {
             String redisKey = RedisConstants.PREFIX_INVENTORY_STOCK + updatedInventory.getProductId();
@@ -163,6 +172,7 @@ public class InventoryService {
                 .availableQuantity(updatedInventory.getAvailableQuantity())
                 .reservedQuantity(updatedInventory.getReservedQuantity())
                 .totalQuantity(updatedInventory.getAvailableQuantity() + updatedInventory.getReservedQuantity())
+                .lowStockThreshold(updatedInventory.getLowStockThreshold())
                 .updatedAt(updatedInventory.getUpdatedAt())
                 .message(message)
                 .build();
@@ -191,6 +201,7 @@ public class InventoryService {
                 .availableQuantity(inv.getAvailableQuantity())
                 .reservedQuantity(inv.getReservedQuantity())
                 .totalQuantity(inv.getAvailableQuantity() + inv.getReservedQuantity())
+                .lowStockThreshold(inv.getLowStockThreshold())
                 .updatedAt(inv.getUpdatedAt())
                 .message("Inventory retrieved successfully")
                 .build();
@@ -207,10 +218,57 @@ public class InventoryService {
                         .availableQuantity(inv.getAvailableQuantity())
                         .reservedQuantity(inv.getReservedQuantity())
                         .totalQuantity(inv.getAvailableQuantity() + inv.getReservedQuantity())
+                        .lowStockThreshold(inv.getLowStockThreshold())
                         .updatedAt(inv.getUpdatedAt())
                         .message("LOW STOCK ALERT: Below threshold of " + inv.getLowStockThreshold())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Kiểm tra tồn kho khả dụng và phát cảnh báo tồn kho thấp cho Admin qua RabbitMQ
+     */
+    public void checkAndPublishLowStockAlert(Inventory inventory) {
+        if (inventory.getAvailableQuantity() < inventory.getLowStockThreshold()) {
+            log.warn("[LOW STOCK ALERT] Product {} is low on stock: {} left (threshold: {})",
+                    inventory.getProductId(), inventory.getAvailableQuantity(), inventory.getLowStockThreshold());
+            try {
+                // Fetch product details via Feign to make the alert message rich
+                String productName = "Sản phẩm " + inventory.getProductId();
+                String productSku = "N/A";
+                try {
+                    ApiResponse<Object> productResponse = productClient.getProductById(inventory.getProductId());
+                    if (productResponse != null && productResponse.isSuccess() && productResponse.getResult() != null) {
+                        Map<String, Object> prod = (Map<String, Object>) productResponse.getResult();
+                        if (prod.get("name") != null) {
+                            productName = (String) prod.get("name");
+                        }
+                        if (prod.get("sku") != null) {
+                            productSku = (String) prod.get("sku");
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.warn("Could not retrieve product info from product-service for low-stock alert: {}", ex.getMessage());
+                }
+
+                // Construct NotificationEvent
+                NotificationEvent alertEvent = NotificationEvent.builder()
+                        .userId("admin") // Target is admin
+                        .status("LOW_STOCK")
+                        .message(String.format("Cảnh báo tồn kho: Sản phẩm [%s] (SKU: %s, ID: %s) sắp hết hàng hoặc đã hết hàng. Tồn kho khả dụng hiện tại: %d (Ngưỡng cảnh báo: %d)",
+                                productName, productSku, inventory.getProductId(), inventory.getAvailableQuantity(), inventory.getLowStockThreshold()))
+                        .build();
+
+                rabbitTemplate.convertAndSend(
+                        RabbitMQConstants.EXCHANGE_NAME,
+                        RabbitMQConstants.NOTIFICATION_STOCK_LOW,
+                        alertEvent
+                );
+                log.info("Sent low-stock alert event to RabbitMQ for product: {}", inventory.getProductId());
+            } catch (Exception e) {
+                log.error("Failed to publish low-stock alert to RabbitMQ: {}", e.getMessage());
+            }
+        }
     }
 
     /**

@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "processed_events", indexes = {
-        @Index(name = "idx_order_id", columnList = "order_id", unique = true)
+        @Index(name = "uc_order_event", columnList = "order_id, event_type", unique = true)
 })
 @Data
 @NoArgsConstructor
@@ -26,7 +26,7 @@ public class ProcessedEvent {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(name = "order_id", nullable = false, unique = true)
+    @Column(name = "order_id", nullable = false)
     private String orderId;
 
     @Column(name = "event_type", nullable = false)

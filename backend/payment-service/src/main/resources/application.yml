@@ -23,7 +23,7 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
 
 vnpay:
-  tmnCode: "WODXQXV2" 
-  hashSecret: "PLF6N2OKEJWLJ816DZENB2DXERLXBLDJ" 
-  url: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
-  returnUrl: "http://localhost:3000/payment-result" 
+  tmnCode: ${SPRING_VNPAY_TMN_CODE}
+  hashSecret: ${SPRING_VNPAY_HASH_SECRET}
+  url: ${SPRING_VNPAY_PAY_URL}
+  returnUrl: ${SPRING_VNPAY_RETURN_URL} 

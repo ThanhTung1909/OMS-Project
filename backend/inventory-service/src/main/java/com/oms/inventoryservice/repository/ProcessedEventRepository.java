@@ -19,4 +19,9 @@ public interface ProcessedEventRepository extends JpaRepository<ProcessedEvent, 
      * Check xem một orderId có được xử lý rồi không
      */
     boolean existsByOrderId(String orderId);
+
+    /**
+     * Check xem một orderId và eventType có được xử lý rồi không
+     */
+    boolean existsByOrderIdAndEventType(String orderId, ProcessedEvent.EventType eventType);
 }

@@ -127,8 +127,8 @@ public class InventoryEventListener {
         log.info("Received CONFIRM command: {}", command);
 
         try {
-            // BƯỚC 1: Check Idempotency - xem orderId này đã được xử lý chưa?
-            if (processedEventRepository.existsByOrderId(command.getOrderId())) {
+            // BƯỚC 1: Check Idempotency - xem orderId + CONFIRM này đã được xử lý chưa?
+            if (processedEventRepository.existsByOrderIdAndEventType(command.getOrderId(), ProcessedEvent.EventType.CONFIRM)) {
                 log.warn("Order {} already processed (CONFIRM). Skipping to prevent duplicate processing",
                         command.getOrderId());
                 return;
@@ -201,8 +201,8 @@ public class InventoryEventListener {
         log.info("Received ROLLBACK command: {}", command);
 
         try {
-            // BƯỚC 1: Check Idempotency - xem orderId này đã được xử lý chưa?
-            if (processedEventRepository.existsByOrderId(command.getOrderId())) {
+            // BƯỚC 1: Check Idempotency - xem orderId + ROLLBACK này đã được xử lý chưa?
+            if (processedEventRepository.existsByOrderIdAndEventType(command.getOrderId(), ProcessedEvent.EventType.ROLLBACK)) {
                 log.warn("Order {} already processed (ROLLBACK). Skipping to prevent duplicate processing",
                         command.getOrderId());
                 return;
@@ -218,17 +218,20 @@ public class InventoryEventListener {
 
             Inventory inventory = existingInventory.get();
 
-            // BƯỚC 3: Validate - check xem reservedQuantity có đủ không
-            if (inventory.getReservedQuantity() < command.getQuantity()) {
-                log.error("Insufficient reserved quantity to rollback. Reserved: {}, Required: {}",
-                        inventory.getReservedQuantity(), command.getQuantity());
-                return;
+            // BƯỚC 3 & 4: Thực hiện rollback - kiểm tra xem đơn đã CONFIRM chưa để trả lại hàng lên kệ đúng cơ chế
+            if (processedEventRepository.existsByOrderIdAndEventType(command.getOrderId(), ProcessedEvent.EventType.CONFIRM)) {
+                log.info("[INVENTORY] Đơn hàng {} đã CONFIRM trước đó. Thực hiện hoàn kho khả dụng trực tiếp cho sản phẩm {} (availableQuantity + {}).", 
+                        command.getOrderId(), command.getProductId(), command.getQuantity());
+                inventory.setAvailableQuantity(inventory.getAvailableQuantity() + command.getQuantity());
+            } else {
+                if (inventory.getReservedQuantity() < command.getQuantity()) {
+                    log.error("Insufficient reserved quantity to rollback. Reserved: {}, Required: {}",
+                            inventory.getReservedQuantity(), command.getQuantity());
+                    return;
+                }
+                inventory.setReservedQuantity(inventory.getReservedQuantity() - command.getQuantity());
+                inventory.setAvailableQuantity(inventory.getAvailableQuantity() + command.getQuantity());
             }
-
-            // BƯỚC 4: Thực hiện rollback - trả lại hàng lên kệ
-            // Logic: reservedQuantity giảm, availableQuantity tăng
-            inventory.setReservedQuantity(inventory.getReservedQuantity() - command.getQuantity());
-            inventory.setAvailableQuantity(inventory.getAvailableQuantity() + command.getQuantity());
 
             // Lưu Inventory cập nhật
             inventoryRepository.save(inventory);

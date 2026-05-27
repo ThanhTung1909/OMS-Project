@@ -61,7 +61,7 @@ public class AiConfig {
                 .port(redisPort)
                 .indexName("oms_products")
                 .dimension(768) // Kích thước Vector của Google text-embedding-004 là 768
-                .metadataKeys(java.util.Arrays.asList("productId", "productName", "price", "description", "stockQuantity"))
+                .metadataKeys(java.util.Arrays.asList("productId", "productName", "price", "description", "stockQuantity", "imageUrl"))
                 .build();
     }
 }

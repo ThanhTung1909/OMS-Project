@@ -32,23 +32,75 @@ public class AiFraudDetectionService {
         String status = "SAFE";
         String reason = "Đơn hàng bình thường.";
 
+        boolean isHighValueCod = false;
+        boolean isInvalidPhone = false;
+        boolean isWeakAddress = false;
+        boolean isPriceSuspicious = false;
+
         try {
             // 1. Phân tích Heuristics (Quy tắc cứng ban đầu)
             // Ví dụ: Đơn hàng COD có giá trị cực lớn trên 50,000,000 VNĐ là một dấu hiệu khả nghi ban đầu
-            boolean isHighValueCod = "COD".equalsIgnoreCase(command.getPaymentMethod()) && 
+            isHighValueCod = "COD".equalsIgnoreCase(command.getPaymentMethod()) && 
                     command.getTotalAmount().compareTo(new BigDecimal("50000000")) > 0;
 
             // Số điện thoại không hợp lệ (ít hơn 9 chữ số)
             String phone = command.getReceiverPhone() != null ? command.getReceiverPhone().replaceAll("\\s+", "") : "";
-            boolean isInvalidPhone = phone.length() < 9;
+            isInvalidPhone = phone.length() < 9;
 
-            // Địa chỉ nhận hàng quá sơ sài hoặc chung chung
+            // Địa chỉ nhận hàng quá sơ sài hoặc chung chung, không chuẩn định dạng hành chính Việt Nam
             String address = command.getAddress() != null ? command.getAddress().trim() : "";
-            boolean isWeakAddress = address.length() < 8 || address.equalsIgnoreCase("Việt Nam") || address.equalsIgnoreCase("Hà Nội") || address.equalsIgnoreCase("Hồ Chí Minh");
+            String addressLower = address.toLowerCase();
+            
+            boolean hasStreetIndicator = addressLower.contains("đường") || addressLower.contains("phố") || addressLower.contains("ngõ") 
+                    || addressLower.contains("ngách") || addressLower.contains("hẻm") || addressLower.contains("số") 
+                    || addressLower.contains("/") || addressLower.matches(".*\\d+.*");
+            boolean hasWardCommune = addressLower.contains("phường") || addressLower.contains("xã") || addressLower.contains("thị trấn") 
+                    || addressLower.contains("ấp") || addressLower.contains("thôn") || addressLower.contains("xóm");
+            boolean hasDistrict = addressLower.contains("quận") || addressLower.contains("huyện") || addressLower.contains("thị xã");
+            boolean hasProvinceCity = addressLower.contains("tỉnh") || addressLower.contains("thành phố") || addressLower.contains("tp");
+            
+            int administrativeScore = 0;
+            if (hasStreetIndicator) administrativeScore++;
+            if (hasWardCommune) administrativeScore++;
+            if (hasDistrict) administrativeScore++;
+            if (hasProvinceCity) administrativeScore++;
+
+            isWeakAddress = address.length() < 15 || administrativeScore < 2 
+                    || addressLower.equalsIgnoreCase("Việt Nam") 
+                    || addressLower.equalsIgnoreCase("Hà Nội") 
+                    || addressLower.equalsIgnoreCase("Hồ Chí Minh")
+                    || (addressLower.contains("abc") && address.length() < 20);
+
+            // Kiểm tra gian lận đơn giá sản phẩm sai lệch với giá trị thực tế thị trường tại Việt Nam (Price Tampering / Client Hack)
+            if (command.getItems() != null) {
+                for (var item : command.getItems()) {
+                    if (item.getProductName() == null || item.getPrice() == null) continue;
+                    String nameLower = item.getProductName().toLowerCase();
+                    BigDecimal price = item.getPrice();
+
+                    // Heuristics 1: Mặt hàng thời trang bình dân (áo thun, quần, váy, đầm, mũ, kính, túi...) có đơn giá quá cao (> 3,000,000 VNĐ) hoặc quá thấp (< 10,000 VNĐ)
+                    if ((nameLower.contains("áo") || nameLower.contains("quần") || nameLower.contains("đầm") 
+                            || nameLower.contains("váy") || nameLower.contains("túi") || nameLower.contains("kính") 
+                            || nameLower.contains("dép") || nameLower.contains("giày") || nameLower.contains("thun"))
+                            && (price.compareTo(new BigDecimal("3000000")) > 0 || price.compareTo(new BigDecimal("10000")) < 0)) {
+                        isPriceSuspicious = true;
+                    }
+
+                    // Heuristics 2: Mặt hàng công nghệ cao cấp chính hãng (MacBook, Laptop, Galaxy S23, PS5, Bose, Garmin, Sony headphones, AirPods)
+                    // có giá rẻ mạt đáng ngờ (< 200,000 VNĐ) hoặc quá đắt (> 200,000,000 VNĐ)
+                    if ((nameLower.contains("laptop") || nameLower.contains("macbook") || nameLower.contains("điện thoại") 
+                            || nameLower.contains("samsung") || nameLower.contains("playstation") || nameLower.contains("sony") 
+                            || nameLower.contains("airpods") || nameLower.contains("bose") || nameLower.contains("garmin") 
+                            || nameLower.contains("canon") || nameLower.contains("tivi"))
+                            && (price.compareTo(new BigDecimal("200000")) < 0 || price.compareTo(new BigDecimal("200000000")) > 0)) {
+                        isPriceSuspicious = true;
+                    }
+                }
+            }
 
             // 2. Sử dụng Google Gemini AI để phân tích hành vi nâng cao
             String aiPrompt = "Bạn là một chuyên gia phân tích an ninh thương mại điện tử chuyên nghiệp (Cybersecurity & Fraud Analyst).\n"
-                    + "Hãy phân tích chi tiết đơn hàng sau để tìm kiếm các dấu hiệu lừa đảo, giả mạo thông tin, đặt đơn ảo hoặc phá hoại:\n\n"
+                    + "Hãy phân tích chi tiết đơn hàng sau để tìm kiếm các dấu hiệu lừa đảo, giả mạo thông tin, đặt đơn ảo, phá hoại hoặc can thiệp chỉnh sửa giá (Price Tampering):\n\n"
                     + "=== CHI TIẾT ĐƠN HÀNG ===\n"
                     + "Mã đơn hàng: " + command.getOrderId() + "\n"
                     + "Mã khách hàng: " + command.getUserId() + "\n"
@@ -67,7 +119,11 @@ public class AiFraudDetectionService {
             aiPrompt += "\n=== DỰ BÁO CỦA HỆ THỐNG HEURISTICS ===\n"
                     + "- Đơn hàng COD giá trị cao: " + (isHighValueCod ? "CÓ" : "KHÔNG") + "\n"
                     + "- Số điện thoại khả nghi: " + (isInvalidPhone ? "CÓ" : "KHÔNG") + "\n"
-                    + "- Địa chỉ giao hàng sơ sài: " + (isWeakAddress ? "CÓ" : "KHÔNG") + "\n\n"
+                    + "- Địa chỉ giao hàng sơ sài/ảo ở Việt Nam: " + (isWeakAddress ? "CÓ" : "KHÔNG") + "\n"
+                    + "- Có sản phẩm lệch giá thị trường nghiêm trọng (Price Tampering): " + (isPriceSuspicious ? "CÓ" : "KHÔNG") + "\n\n"
+                    + "=== HƯỚNG DẪN KIỂM TRA CHO CHUYÊN GIA AI ===\n"
+                    + "1. Địa chỉ Việt Nam hợp chuẩn phải gồm tối thiểu 2 cấp hành chính chi tiết (ví dụ: Số nhà/Tên đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố). Nếu địa chỉ chỉ ghi mỗi tên tỉnh/thành phố chung chung hoặc chứa ký tự vô nghĩa (abc, xyz), hãy đánh giá là rủi ro rất cao.\n"
+                    + "2. Kiểm tra kỹ đơn giá (Price) của từng mặt hàng: Đối chiếu xem có sản phẩm nào bị chỉnh sửa giá bất thường so với giá trị thực tế của chúng trên thị trường Việt Nam hay không (Ví dụ: Áo thun nam có giá tới vài triệu đồng, hoặc Laptop/MacBook xịn có giá chỉ vài nghìn hay vài trăm nghìn đồng). Đây là dấu hiệu của việc can thiệp giá client bất hợp pháp. BẮT BUỘC chấm điểm rủi ro >= 80 (RISKY) nếu phát hiện bất kỳ sản phẩm nào lệch giá bất hợp lý.\n\n"
                     + "=== YÊU CẦU TRẢ LỜI ===\n"
                     + "Hãy chấm điểm rủi ro gian lận (fraudScore) từ 0 (Hoàn toàn an toàn) đến 100 (Gian lận tuyệt đối).\n"
                     + "Nếu điểm rủi ro lớn hơn hoặc bằng 80, trạng thái (status) phải là 'RISKY'. Ngược lại là 'SAFE'.\n"
@@ -85,7 +141,7 @@ public class AiFraudDetectionService {
                 aiResult = chatModel.generate(aiPrompt);
             } catch (Exception e) {
                 log.warn("[AI FRAUD DETECTOR] Không thể gọi Google Gemini (Lỗi: {}). Sử dụng fallback Heuristics với lý do tiếng Việt tự nhiên nhất.", e.getMessage());
-                aiResult = generateFallbackFraudResponse(command, isHighValueCod, isInvalidPhone, isWeakAddress);
+                aiResult = generateFallbackFraudResponse(command, isHighValueCod, isInvalidPhone, isWeakAddress, isPriceSuspicious);
             }
             log.info("[AI FRAUD DETECTOR] Kết quả nhận được: {}", aiResult);
 
@@ -100,10 +156,18 @@ public class AiFraudDetectionService {
         } catch (Exception e) {
             log.error("[AI FRAUD DETECTOR] Lỗi nghiêm trọng khi phân tích gian lận: ", e);
             // Thuật toán Heuristic dự phòng trong trường hợp API AI bị lỗi
-            if (command.getTotalAmount().compareTo(new BigDecimal("100000000")) > 0) {
+            if (isPriceSuspicious) {
+                fraudScore = 95;
+                status = "RISKY";
+                reason = "Đơn hàng bị từ chối do phát hiện chênh lệch đơn giá sản phẩm so với thực tế (Price Tampering).";
+            } else if (command.getTotalAmount().compareTo(new BigDecimal("100000000")) > 0) {
                 fraudScore = 90;
                 status = "RISKY";
                 reason = "Giá trị đơn hàng vượt quá hạn mức tối đa cho phép thanh toán COD (trên 100 triệu VNĐ).";
+            } else if (isWeakAddress) {
+                fraudScore = 80;
+                status = "RISKY";
+                reason = "Địa chỉ nhận hàng sơ sài hoặc không đúng cấu trúc địa lý Việt Nam.";
             }
         }
 
@@ -120,12 +184,16 @@ public class AiFraudDetectionService {
         log.info("[AI FRAUD DETECTOR] Đã hoàn thành kiểm tra và gửi phản hồi cho đơn hàng: {} (Status: {}, Score: {})", 
                 command.getOrderId(), status, fraudScore);
     }
-    private String generateFallbackFraudResponse(com.oms.common.dto.FraudCheckCommand command, boolean isHighValueCod, boolean isInvalidPhone, boolean isWeakAddress) {
+    private String generateFallbackFraudResponse(com.oms.common.dto.FraudCheckCommand command, boolean isHighValueCod, boolean isInvalidPhone, boolean isWeakAddress, boolean isPriceSuspicious) {
         int score = 15;
         String status = "SAFE";
         String reason = "Thông tin đơn hàng đầy đủ, phương thức thanh toán an toàn.";
 
-        if (isHighValueCod) {
+        if (isPriceSuspicious) {
+            score = 95;
+            status = "RISKY";
+            reason = "CẢNH BÁO GIAN LẬN ĐƠN GIÁ: Phát hiện một hoặc nhiều sản phẩm có đơn giá chênh lệch quá xa so với giá trị thị trường thực tế tại Việt Nam (dấu hiệu sửa đổi giá bất hợp pháp).";
+        } else if (isHighValueCod) {
             score = 85;
             status = "RISKY";
             reason = "Phát hiện dấu hiệu rủi ro cao: Đơn hàng COD có tổng giá trị giao dịch rất lớn (" 
@@ -139,8 +207,7 @@ public class AiFraudDetectionService {
         } else if (isWeakAddress) {
             score = 80;
             status = "RISKY";
-            reason = "Phát hiện thông tin khả nghi: Địa chỉ nhận hàng quá sơ sài hoặc chung chung \"" + (command.getAddress() != null ? command.getAddress() : "") 
-                    + "\", không đảm bảo tính xác thực để đơn vị vận chuyển có thể giao hàng thành công.";
+            reason = "Phát hiện thông tin khả nghi: Địa chỉ nhận hàng tại Việt Nam quá sơ sài, thiếu số nhà/đường hoặc không rõ phường/xã, quận/huyện, không đảm bảo tính xác thực để giao hàng.";
         }
 
         return String.format("{\n  \"fraudScore\": %d,\n  \"status\": \"%s\",\n  \"reason\": \"%s\"\n}", score, status, reason);

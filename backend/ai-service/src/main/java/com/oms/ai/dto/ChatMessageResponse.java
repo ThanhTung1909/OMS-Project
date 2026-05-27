@@ -24,5 +24,6 @@ public class ChatMessageResponse {
         private Double price;
         private String description;
         private Integer stockQuantity;
+        private String imageUrl;
     }
 }

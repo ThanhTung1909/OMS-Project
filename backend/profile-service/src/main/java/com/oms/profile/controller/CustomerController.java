@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class CustomerController {
     private final CustomerService customerService;
+    private final com.oms.common.service.UploadService uploadService;
     
     @GetMapping({"/me", "/account/{accountId}"})
     public ResponseEntity<ApiResponse<CustomerProfileResponse>> getProfile(
@@ -26,6 +27,20 @@ public class CustomerController {
         // Ưu tiên pathId (cho admin/internal), sau đó mới đến headerId (cho user tự xem)
         String id = (pathId != null) ? pathId : headerId;
         return ok(customerService.getProfileByAccountId(id));
+    }
+
+    @PostMapping("/me/avatar")
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> uploadAvatar(
+            @RequestHeader("X-Account-Id") String accountId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        try {
+            String avatarUrl = uploadService.uploadFile(file, "avatars");
+            UpdateProfileRequest request = new UpdateProfileRequest();
+            request.setAvatarUrl(avatarUrl);
+            return ok(customerService.updateProfile(accountId, request));
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to upload avatar", e);
+        }
     }
 
     @PostMapping("/addresses")

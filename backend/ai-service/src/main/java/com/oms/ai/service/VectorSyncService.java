@@ -23,6 +23,7 @@ public class VectorSyncService {
     private final EmbeddingModel embeddingModel;
     private final EmbeddingStore redisEmbeddingStore;
     private final StringRedisTemplate stringRedisTemplate;
+    private final StoreMetadataCache storeMetadataCache;
 
     private String getVectorIdKey(String productId) {
         return "ai:product:vector-id:" + productId;
@@ -70,6 +71,7 @@ public class VectorSyncService {
             return 0;
         }
 
+        java.util.Set<String> categorySet = new java.util.HashSet<>();
         for (Map<String, Object> product : products) {
             String id = (String) product.get("id");
             String name = (String) product.get("name");
@@ -80,10 +82,20 @@ public class VectorSyncService {
             Object stockQtyObj = product.get("stockQuantity");
             int stockQuantity = stockQtyObj != null ? ((Number) stockQtyObj).intValue() : 0;
 
+            if (categoryName != null && !categoryName.trim().isEmpty()) {
+                categorySet.add(categoryName);
+            }
+
+            String firstImageUrl = "";
+            List<?> imageUrlList = (List<?>) product.get("imageUrl");
+            if (imageUrlList != null && !imageUrlList.isEmpty()) {
+                firstImageUrl = String.valueOf(imageUrlList.get(0));
+            }
+
             // Tạo snippet text đại diện cho sản phẩm để làm RAG
             String textSegmentContent = String.format(
-                    "Tên sản phẩm: %s\nGiá: %,.0f VNĐ\nPhân loại: %s\nSố lượng tồn kho: %d chiếc\nMô tả: %s",
-                    name, price, categoryName != null ? categoryName : "Chưa phân loại", stockQuantity, description != null ? description : ""
+                    "Tên sản phẩm: %s\nGiá: %,.0f VNĐ\nPhân loại: %s\nSố lượng tồn kho: %d chiếc\nMô tả: %s\nHình ảnh: %s",
+                    name, price, categoryName != null ? categoryName : "Chưa phân loại", stockQuantity, description != null ? description : "", firstImageUrl
             );
 
             // Cấu hình metadata để trích xuất sau này
@@ -93,6 +105,7 @@ public class VectorSyncService {
             metadata.put("price", String.valueOf(price));
             metadata.put("stockQuantity", String.valueOf(stockQuantity));
             metadata.put("description", description != null ? description : "");
+            metadata.put("imageUrl", firstImageUrl);
 
             TextSegment segment = TextSegment.from(textSegmentContent, dev.langchain4j.data.document.Metadata.from(metadata));
             
@@ -113,6 +126,7 @@ public class VectorSyncService {
             stringRedisTemplate.opsForValue().set(vectorIdKey, newVectorId);
             count++;
         }
+        storeMetadataCache.update(count, categorySet);
         log.info("[AI SERVICE] Đồng bộ hóa thành công {} sản phẩm vào Redis Vector DB.", count);
         return count;
     }
@@ -174,9 +188,15 @@ public class VectorSyncService {
             Object stockQtyObj = product.get("stockQuantity");
             int stockQuantity = stockQtyObj != null ? ((Number) stockQtyObj).intValue() : 0;
 
+            String firstImageUrl = "";
+            List<?> imageUrlList = (List<?>) product.get("imageUrl");
+            if (imageUrlList != null && !imageUrlList.isEmpty()) {
+                firstImageUrl = String.valueOf(imageUrlList.get(0));
+            }
+
             String textSegmentContent = String.format(
-                    "Tên sản phẩm: %s\nGiá: %,.0f VNĐ\nPhân loại: %s\nSố lượng tồn kho: %d chiếc\nMô tả: %s",
-                    name, price, categoryName != null ? categoryName : "Chưa phân loại", stockQuantity, description != null ? description : ""
+                    "Tên sản phẩm: %s\nGiá: %,.0f VNĐ\nPhân loại: %s\nSố lượng tồn kho: %d chiếc\nMô tả: %s\nHình ảnh: %s",
+                    name, price, categoryName != null ? categoryName : "Chưa phân loại", stockQuantity, description != null ? description : "", firstImageUrl
             );
 
             Map<String, String> metadata = new HashMap<>();
@@ -185,6 +205,7 @@ public class VectorSyncService {
             metadata.put("price", String.valueOf(price));
             metadata.put("stockQuantity", String.valueOf(stockQuantity));
             metadata.put("description", description != null ? description : "");
+            metadata.put("imageUrl", firstImageUrl);
 
             TextSegment segment = TextSegment.from(textSegmentContent, dev.langchain4j.data.document.Metadata.from(metadata));
             Embedding embedding = embeddingModel.embed(textSegmentContent).content();

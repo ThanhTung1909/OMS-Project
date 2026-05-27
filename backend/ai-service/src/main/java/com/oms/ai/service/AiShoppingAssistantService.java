@@ -27,6 +27,7 @@ public class AiShoppingAssistantService {
     private final EmbeddingModel embeddingModel;
     private final EmbeddingStore redisEmbeddingStore;
     private final RestTemplate restTemplate;
+    private final StoreMetadataCache storeMetadataCache;
 
     // Pattern để tìm orderId trong câu hỏi (ví dụ: ord-12345, ord-uuid-etc)
     private static final Pattern ORDER_ID_PATTERN = Pattern.compile("(?i)ord-[a-zA-Z0-9\\-]+");
@@ -58,11 +59,20 @@ public class AiShoppingAssistantService {
             
             java.util.Set<String> processedProductIds = new java.util.HashSet<>();
             StringBuilder sb = new StringBuilder("Dưới đây là một số sản phẩm phù hợp được tìm thấy trong cửa hàng:\n");
+            
+            double scoreThreshold = 0.55;
+            int validMatchesCount = 0;
+
             for (EmbeddingMatch<TextSegment> match : matches) {
                 TextSegment segment = match.embedded();
                 
                 log.info("[AI SERVICE] Match score: {}, metadata: {}", match.score(), segment.metadata() != null ? segment.metadata().asMap() : "null");
                 
+                if (match.score() < scoreThreshold) {
+                    log.info("[AI SERVICE] Bỏ qua sản phẩm vì score thấp: {} < {}", match.score(), scoreThreshold);
+                    continue;
+                }
+
                 String prodId = segment.metadata().getString("productId");
                 if (prodId == null || processedProductIds.contains(prodId)) {
                     continue; // Bỏ qua trùng lặp hoặc ID rỗng
@@ -74,6 +84,7 @@ public class AiShoppingAssistantService {
                 String priceStr = segment.metadata().getString("price");
                 String desc = segment.metadata().getString("description");
                 String stockQtyStr = segment.metadata().getString("stockQuantity");
+                String imageUrl = segment.metadata().getString("imageUrl");
                 
                 double price = 0.0;
                 try {
@@ -86,6 +97,7 @@ public class AiShoppingAssistantService {
                 } catch (NumberFormatException ignored) {}
 
                 sb.append(text).append("\n---\n");
+                validMatchesCount++;
 
                 suggestions.add(ChatMessageResponse.ProductSuggestion.builder()
                         .id(prodId)
@@ -93,12 +105,26 @@ public class AiShoppingAssistantService {
                         .price(price)
                         .description(desc)
                         .stockQuantity(stockQuantity)
+                        .imageUrl(imageUrl != null ? imageUrl : "")
                         .build());
             }
-            productsContext = sb.toString();
+            if (validMatchesCount > 0) {
+                productsContext = sb.toString();
+            } else {
+                productsContext = "";
+            }
         }
 
         // 3. Xây dựng System Prompt cho Gemini
+        int totalProducts = storeMetadataCache.getTotalProducts();
+        java.util.Set<String> categories = storeMetadataCache.getCategories();
+
+        String storeSummary = String.format("- **Tổng số sản phẩm có trong hệ thống**: %d sản phẩm.\n"
+                + "- **Các ngành hàng/danh mục sản phẩm hiện kinh doanh**: %s.\n",
+                totalProducts > 0 ? totalProducts : 112,
+                !categories.isEmpty() ? String.join(", ", categories) : "Thời trang Nam, Thời trang Nữ, Thời trang Trẻ em, Tai nghe, Điện thoại, Phụ kiện, Máy ảnh, Máy tính xách tay, Phụ kiện thời trang, Giày dép, Sức khỏe & Sắc đẹp, Tivi & Màn hình, Máy tính bảng, Nội thất & Nhà cửa, Thiết bị gia dụng, Dụng cụ nhà bếp, Thể thao & Thể hình, Y tế & Chăm sóc cá nhân"
+        );
+
         String systemPrompt = "Bạn là trợ lý mua sắm AI (AI Shopping Assistant) cực kỳ thân thiện, chuyên nghiệp và lịch sự của hệ thống thương mại điện tử OMS.\n"
                 + "Nhiệm vụ của bạn là tư vấn sản phẩm, kiểm tra tồn kho và giải đáp thắc mắc của khách hàng dựa trên ngữ cảnh dữ liệu cửa hàng và chính sách được cung cấp bên dưới.\n"
                 + "Hãy trả lời trôi chảy, sử dụng tiếng Việt tự nhiên và Markdown để định dạng câu trả lời đẹp mắt.\n\n"
@@ -107,6 +133,12 @@ public class AiShoppingAssistantService {
                 + "- **Chính sách Đổi trả**: Hỗ trợ 1-đổi-1 hoặc hoàn tiền trong vòng 7 ngày kể từ khi nhận sản phẩm nếu phát hiện lỗi từ nhà sản xuất. Sản phẩm yêu cầu còn nguyên hộp, phụ kiện, hóa đơn mua hàng và chưa qua sử dụng.\n"
                 + "- **Phương thức Thanh toán**: Chấp nhận thanh toán qua Chuyển khoản ngân hàng trực tuyến (BANKING) hoặc Thanh toán khi nhận hàng (COD).\n"
                 + "- **Chính sách Chống gian lận AI**: Hệ thống sử dụng trí tuệ nhân tạo để rà soát đơn hàng tự động. Các đơn hàng COD có giá trị giao dịch cực lớn hoặc thông tin liên hệ không chính xác (số điện thoại ảo, địa chỉ sơ sài) sẽ bị AI tự động từ chối đặt hàng để bảo đảm an toàn kho hàng.\n\n"
+                + "=== THÔNG TIN CỬA HÀNG (STORE METADATA) ===\n"
+                + storeSummary + "\n"
+                + "=== LƯU Ý QUAN TRỌNG VỀ HÌNH ẢNH SẢN PHẨM ===\n"
+                + "- Trong dữ liệu sản phẩm của 'NGỮ CẢNH DỮ LIỆU CỬA HÀNG' dưới đây có thông tin 'Hình ảnh' (chứa URL hình ảnh của sản phẩm).\n"
+                + "- Khi giới thiệu hoặc đề xuất bất kỳ sản phẩm nào cho khách hàng, bạn **BẮT BUỘC** phải chèn hình ảnh của sản phẩm đó bằng cú pháp Markdown: `![tên sản phẩm](url_hình_ảnh)` ngay bên dưới tiêu đề tên sản phẩm để khách hàng nhìn thấy trực quan.\n"
+                + "- Tuyệt đối không tự chế URL hình ảnh bừa bãi. Chỉ sử dụng đúng URL hình ảnh được cung cấp trong phần thông tin sản phẩm bên dưới. Nếu không có hình ảnh hoặc URL trống, hãy bỏ qua việc hiển thị hình ảnh.\n\n"
                 + "=== NGỮ CẢNH DỮ LIỆU CỬA HÀNG ===\n";
 
         if (!deliveryContext.isEmpty()) {
@@ -115,7 +147,7 @@ public class AiShoppingAssistantService {
             systemPrompt += productsContext;
             systemPrompt += "\nHãy tư vấn chi tiết cho khách hàng về các sản phẩm trên, nhấn mạnh lý do tại sao chúng phù hợp với câu hỏi của khách hàng. Nếu khách hàng hỏi về số lượng hàng còn lại (tồn kho/số lượng khả dụng), hãy đọc thông tin 'Số lượng tồn kho' trong dữ liệu sản phẩm để trả lời chính xác.";
         } else {
-            systemPrompt += "Không tìm thấy sản phẩm nào phù hợp trực tiếp. Hãy lịch sự phản hồi và hỏi rõ thêm nhu cầu của khách hàng, hoặc trả lời các câu hỏi về chính sách mua hàng nếu khách hàng đang hỏi về chúng.";
+            systemPrompt += "Không tìm thấy sản phẩm nào phù hợp trực tiếp. Hãy lịch sự phản hồi và hỏi rõ thêm nhu cầu của khách hàng, hoặc trả lời các câu hỏi về chính sách mua hàng hoặc thông tin cửa hàng ở trên nếu khách hàng đang hỏi về chúng.";
         }
 
         systemPrompt += "\n\nCâu hỏi của khách hàng: " + message;
@@ -151,8 +183,11 @@ public class AiShoppingAssistantService {
 
             for (int i = 0; i < suggestions.size(); i++) {
                 var p = suggestions.get(i);
-                sb.append(String.format("%d. **%s**\n", i + 1, p.getName()))
-                  .append(String.format("   - **Giá bán**: %,.0f VNĐ\n", p.getPrice()))
+                sb.append(String.format("%d. **%s**\n", i + 1, p.getName()));
+                if (p.getImageUrl() != null && !p.getImageUrl().isEmpty()) {
+                    sb.append(String.format("   ![%s](%s)\n", p.getName(), p.getImageUrl()));
+                }
+                sb.append(String.format("   - **Giá bán**: %,.0f VNĐ\n", p.getPrice()))
                   .append(String.format("   - **Mô tả**: %s\n\n", p.getDescription() != null ? p.getDescription() : "Sản phẩm chất lượng cao"));
             }
 

@@ -36,6 +36,9 @@ public class Delivery {
     private String shipperName;
     private String shipperPhone;
     
+    @Column(name = "shipper_id")
+    private String shipperId;
+    
     private String receiverName;
     private String receiverPhone;
     @Column(length = 1000)

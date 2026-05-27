@@ -3,31 +3,54 @@ package com.oms.productservice.controller;
 import com.oms.productservice.dto.productDTO.ProductRequest;
 import com.oms.productservice.dto.productDTO.ProductResponse;
 import com.oms.productservice.service.ProductService;
+import com.oms.common.service.UploadService;
 import lombok.RequiredArgsConstructor;
 import com.oms.common.ApiResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
 public class ProductController {
     private final ProductService productService;
+    private final UploadService uploadService;
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@Valid @RequestBody ProductRequest request){
-        ProductResponse response = productService.createProduct(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-            ApiResponse.<ProductResponse>builder()
-                .success(true)
-                .status(HttpStatus.CREATED.value())
-                .message("Thành công")
-                .result(response)
-                .build()
-        );
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
+            @Valid @ModelAttribute ProductRequest request,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files){
+        try {
+            List<String> imageUrls = new ArrayList<>();
+            if (files != null && !files.isEmpty()) {
+                for (MultipartFile file : files) {
+                    if (file != null && !file.isEmpty()) {
+                        imageUrls.add(uploadService.uploadFile(file, "products"));
+                    }
+                }
+            }
+            if (!imageUrls.isEmpty()) {
+                request.setImageUrl(imageUrls);
+            }
+            ProductResponse response = productService.createProduct(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(
+                ApiResponse.<ProductResponse>builder()
+                    .success(true)
+                    .status(HttpStatus.CREATED.value())
+                    .message("Thành công")
+                    .result(response)
+                    .build()
+            );
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to upload product images", e);
+        }
     }
 
     @GetMapping
@@ -76,16 +99,34 @@ public class ProductController {
         );
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(@PathVariable String id, @Valid @RequestBody ProductRequest request){
-        return ResponseEntity.ok(
-            ApiResponse.<ProductResponse>builder()
-                .success(true)
-                .status(HttpStatus.OK.value())
-                .message("Thành công")
-                .result(productService.updateProduct(id, request))
-                .build()
-        );
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
+            @PathVariable String id,
+            @Valid @ModelAttribute ProductRequest request,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files){
+        try {
+            List<String> imageUrls = new ArrayList<>();
+            if (files != null && !files.isEmpty()) {
+                for (MultipartFile file : files) {
+                    if (file != null && !file.isEmpty()) {
+                        imageUrls.add(uploadService.uploadFile(file, "products"));
+                    }
+                }
+            }
+            if (!imageUrls.isEmpty()) {
+                request.setImageUrl(imageUrls);
+            }
+            return ResponseEntity.ok(
+                ApiResponse.<ProductResponse>builder()
+                    .success(true)
+                    .status(HttpStatus.OK.value())
+                    .message("Thành công")
+                    .result(productService.updateProduct(id, request))
+                    .build()
+            );
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to upload product images", e);
+        }
     }
 
     @DeleteMapping("/{id}")

@@ -24,11 +24,17 @@ public class DeliveryController {
     public ResponseEntity<ApiResponse<Delivery>> updateStatus(
             @PathVariable String id, 
             @RequestParam DeliveryStatus status,
-            @RequestParam(required = false) String failReason) {
+            @RequestParam(required = false) String failReason,
+            @RequestHeader(value = "X-Account-Id", required = false) String headerId) {
             
-        log.info("Received request to update delivery {} status to {}", id, status);
+        log.info("Received request to update delivery {} status to {} by shipper: {}", id, status, headerId);
         
-        Optional<Delivery> updated = deliveryService.updateStatus(id, status, failReason);
+        Optional<Delivery> updated;
+        if (headerId != null) {
+            updated = deliveryService.updateStatusForShipper(id, headerId, status, failReason);
+        } else {
+            updated = deliveryService.updateStatus(id, status, failReason);
+        }
         
         if (updated.isPresent()) {
             return ResponseEntity.ok(ApiResponse.<Delivery>builder()
@@ -46,6 +52,21 @@ public class DeliveryController {
                             .build()
             );
         }
+    }
+
+    @GetMapping("/shipper")
+    public ResponseEntity<ApiResponse<java.util.List<Delivery>>> getDeliveriesByShipper(
+            @RequestHeader("X-Account-Id") String shipperId,
+            @RequestParam(required = false) DeliveryStatus status) {
+        
+        log.info("Received request to get deliveries for shipper {} with status {}", shipperId, status);
+        java.util.List<Delivery> result = deliveryService.getDeliveriesByShipper(shipperId, status);
+        return ResponseEntity.ok(ApiResponse.<java.util.List<Delivery>>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Thành công")
+                .result(result)
+                .build());
     }
 
     @GetMapping("/order/{orderId}")

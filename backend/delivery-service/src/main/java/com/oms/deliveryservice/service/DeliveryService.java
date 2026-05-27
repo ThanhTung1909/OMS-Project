@@ -30,7 +30,8 @@ public class DeliveryService {
                 .receiverPhone(request.getReceiverPhone())
                 .address(request.getAddress())
                 .codAmount(request.getCodAmount())
-                .shipperName("OMS Logistics - Shipper")
+                .shipperId("shipper_demo")
+                .shipperName("Shipper Demo")
                 .shipperPhone("0988888888")
                 .status(DeliveryStatus.READY_TO_UP)
                 .build();
@@ -107,5 +108,26 @@ public class DeliveryService {
     
     private String generateTrackingNumber() {
         return "OMS-SHIP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    public java.util.List<Delivery> getDeliveriesByShipper(String shipperId, DeliveryStatus status) {
+        log.info("Fetching deliveries for shipper {} with status filter: {}", shipperId, status);
+        if (status != null) {
+            return deliveryRepository.findByShipperIdAndStatus(shipperId, status);
+        }
+        return deliveryRepository.findByShipperId(shipperId);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public Optional<Delivery> updateStatusForShipper(String id, String shipperId, DeliveryStatus status, String failReason) {
+        Optional<Delivery> optionalDelivery = deliveryRepository.findById(id);
+        if (optionalDelivery.isPresent()) {
+            Delivery delivery = optionalDelivery.get();
+            if (delivery.getShipperId() == null || !delivery.getShipperId().equals(shipperId)) {
+                throw new RuntimeException("Bạn không có quyền cập nhật trạng thái đơn vận chuyển này!");
+            }
+            return updateStatus(id, status, failReason);
+        }
+        return Optional.empty();
     }
 }

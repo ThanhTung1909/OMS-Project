@@ -103,6 +103,42 @@ public class DatabaseSeeder {
                     log.error("Lỗi khi lưu Outbox event cho User: {}", e.getMessage());
                 }
             }
+            // 3. Seed tài khoản Shipper mẫu
+            if (accountRepository.findByUsername("shipper").isEmpty()) {
+                Account shipper = new Account();
+                shipper.setId("shipper_demo");
+                shipper.setUsername("shipper");
+                shipper.setPasswordHash(passwordEncoder.encode("Shipper123"));
+                shipper.setEmail("shipper@oms.com");
+                shipper.setFullName("Shipper Demo");
+                shipper.setRole(Role.STAFF);
+                shipper.setStatus(AccountStatus.ACTIVE);
+                
+                accountRepository.save(shipper);
+
+                AccountCreatedEvent event = AccountCreatedEvent.builder()
+                    .accountId(shipper.getId())
+                    .userName(shipper.getUsername())
+                    .email(shipper.getEmail())
+                    .fullname("Shipper Demo")
+                    .role(shipper.getRole().name())
+                    .phone("0988888888")
+                    .build();
+
+                try {
+                    OutboxEvent outboxEvent = OutboxEvent.builder()
+                            .aggregateId(shipper.getId())
+                            .type(RabbitMQConstants.IDENTITY_ACCOUNT_CREATED)
+                            .payload(objectMapper.writeValueAsString(event))
+                            .status(OutboxStatus.PENDING)
+                            .build();
+
+                    outboxEventRepository.save(outboxEvent);
+                    log.info("Đã tạo tài khoản Shipper mẫu (shipper/Shipper123) với ID shipper_demo");
+                } catch (Exception e) {
+                    log.error("Lỗi khi lưu Outbox event cho Shipper: {}", e.getMessage());
+                }
+            }
         };
     }
 }

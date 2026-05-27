@@ -29,14 +29,16 @@ public class CustomerController {
         return ok(customerService.getProfileByAccountId(id));
     }
 
-    @PostMapping("/me/avatar")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> uploadAvatar(
+    @PutMapping(value = "/me", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateProfile(
             @RequestHeader("X-Account-Id") String accountId,
-            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+            @ModelAttribute UpdateProfileRequest request,
+            @RequestParam(value = "file", required = false) org.springframework.web.multipart.MultipartFile file) {
         try {
-            String avatarUrl = uploadService.uploadFile(file, "avatars");
-            UpdateProfileRequest request = new UpdateProfileRequest();
-            request.setAvatarUrl(avatarUrl);
+            if (file != null && !file.isEmpty()) {
+                String avatarUrl = uploadService.uploadFile(file, "avatars");
+                request.setAvatarUrl(avatarUrl);
+            }
             return ok(customerService.updateProfile(accountId, request));
         } catch (java.io.IOException e) {
             throw new RuntimeException("Failed to upload avatar", e);
@@ -51,13 +53,6 @@ public class CustomerController {
                 .status(200)
                 .message("Address added successfully")
                 .build());
-    }
-
-    @PutMapping("/me")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateProfile(
-            @RequestHeader("X-Account-Id") String accountId,
-            @RequestBody UpdateProfileRequest request) {
-        return ok(customerService.updateProfile(accountId, request));
     }
 
     @PutMapping("/addresses/{addressId}/default")

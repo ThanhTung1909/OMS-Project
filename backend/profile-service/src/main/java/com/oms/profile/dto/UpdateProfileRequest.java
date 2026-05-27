@@ -12,5 +12,6 @@ public class UpdateProfileRequest {
     private String phone;
     private String avatarUrl;
     private String gender; 
+    @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
     private LocalDate dateOfBirth;
 }

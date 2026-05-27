@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface DeliveryRepository extends JpaRepository<Delivery, String> {
     Optional<Delivery> findByOrderId(String orderId);
     boolean existsByOrderId(String orderId);
+    java.util.List<Delivery> findByShipperId(String shipperId);
+    java.util.List<Delivery> findByShipperIdAndStatus(String shipperId, com.oms.common.enums.DeliveryStatus status);
 }

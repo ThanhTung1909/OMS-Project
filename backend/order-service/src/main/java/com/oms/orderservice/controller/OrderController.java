@@ -85,6 +85,32 @@ public class OrderController {
     }
 
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @GetMapping("/admin")
+    public ResponseEntity<ApiResponse<Page<OrderResponse>>> getAllOrdersForAdmin(
+            org.springframework.data.domain.Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.<Page<OrderResponse>>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Thành công")
+                .result(orderService.getAllOrders(pageable))
+                .build());
+    }
+
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @GetMapping("/admin/{orderId}")
+    public ResponseEntity<ApiResponse<OrderResponse>> getOrderDetailsForAdmin(@PathVariable String orderId) {
+        OrderResponse result = orderService.getOrder(orderId);
+        return ResponseEntity.ok(
+            ApiResponse.<OrderResponse>builder()
+                .success(true)
+                .status(HttpStatus.OK.value())
+                .message("Thành công")
+                .result(result)
+                .build()
+        );
+    }
+
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     @PutMapping("/{id}/prepare")
     public ResponseEntity<ApiResponse<Void>> prepareOrder(@PathVariable String id) {
         orderService.prepareOrder(id);

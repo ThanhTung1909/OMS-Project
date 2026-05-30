@@ -18,6 +18,9 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.math.BigDecimal;
+import java.util.UUID;
+import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/v1/analytics/dashboard")
@@ -34,7 +37,15 @@ public class AnalyticsController {
     public ResponseEntity<Map<String, Object>> getDashboardSummary() {
         LocalDate today = LocalDate.now();
         DailyRevenueStatistics todayStat = dailyRevenueRepository.findByStatDate(today)
-                .orElse(new DailyRevenueStatistics());
+                .orElse(DailyRevenueStatistics.builder()
+                        .id(UUID.randomUUID().toString())
+                        .statDate(today)
+                        .totalRevenue(BigDecimal.ZERO)
+                        .codRevenue(BigDecimal.ZERO)
+                        .onlineRevenue(BigDecimal.ZERO)
+                        .completedOrders(0)
+                        .cancelledOrders(0)
+                        .build());
 
         Map<String, Object> summary = new HashMap<>();
         summary.put("todayTotalRevenue", todayStat.getTotalRevenue());
@@ -66,7 +77,34 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         
         List<DailyRevenueStatistics> stats = dailyRevenueRepository.findByStatDateBetweenOrderByStatDateAsc(startDate, endDate);
-        return ResponseEntity.ok(stats);
+        
+        // Map existing stats by date
+        Map<LocalDate, DailyRevenueStatistics> statsMap = new HashMap<>();
+        for (DailyRevenueStatistics stat : stats) {
+            statsMap.put(stat.getStatDate(), stat);
+        }
+        
+        // Fill in missing dates with zero revenue statistics
+        List<DailyRevenueStatistics> result = new ArrayList<>();
+        LocalDate current = startDate;
+        while (!current.isAfter(endDate)) {
+            if (statsMap.containsKey(current)) {
+                result.add(statsMap.get(current));
+            } else {
+                result.add(DailyRevenueStatistics.builder()
+                        .id(UUID.randomUUID().toString())
+                        .statDate(current)
+                        .totalRevenue(BigDecimal.ZERO)
+                        .codRevenue(BigDecimal.ZERO)
+                        .onlineRevenue(BigDecimal.ZERO)
+                        .completedOrders(0)
+                        .cancelledOrders(0)
+                        .build());
+            }
+            current = current.plusDays(1);
+        }
+        
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/top-products")

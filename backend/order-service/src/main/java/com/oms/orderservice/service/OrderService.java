@@ -46,6 +46,11 @@ public class OrderService {
                 .map(this::mapToOrderResponse);
     }
 
+    public org.springframework.data.domain.Page<OrderResponse> getAllOrders(org.springframework.data.domain.Pageable pageable) {
+        return orderRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(this::mapToOrderResponse);
+    }
+
     @Transactional
     public OrderResponse createOrder(OrderRequest request) {
         String orderId = UUID.randomUUID().toString();

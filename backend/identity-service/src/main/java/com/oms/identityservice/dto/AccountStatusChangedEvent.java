@@ -9,10 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AccountResponse {
-    private String id;
-    private String username;
-    private String email;
-    private String role;
+public class AccountStatusChangedEvent {
+    private String accountId;
     private String status;
 }

@@ -30,6 +30,9 @@ public class Customer {
     @Column(unique = true)
     private String phone;
 
+    @Column(unique = true)
+    private String email;
+
     @Column(name = "avatar_url")
     private String avatarUrl;
 

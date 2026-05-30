@@ -13,6 +13,7 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
@@ -24,6 +25,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
     private final RouterValidator validator;
     private final JwtUtil jwtUtil;
+    private final ReactiveStringRedisTemplate redisTemplate;
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -62,13 +64,21 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
                 log.info("[GATEWAY] {} {} | CorrelationId: {} | Account: {} | Role: {}", method, path, correlationId, accountId, role);
 
-                ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
-                    .header("X-Account-Id", accountId) 
-                    .header("X-User-Role", role)
-                    .header("X-Correlation-Id", correlationId)
-                    .build();
-                
-                return chain.filter(exchange.mutate().request(modifiedRequest).build());
+                return redisTemplate.hasKey("ACCOUNT_BANNED_STATUS:" + accountId)
+                    .flatMap(isBanned -> {
+                        if (Boolean.TRUE.equals(isBanned)) {
+                            log.warn("[GATEWAY] Blocked request from banned account: {}", accountId);
+                            return this.onError(exchange, "Tài khoản của bạn đã bị khoá trên hệ thống", HttpStatus.FORBIDDEN);
+                        }
+                        
+                        ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
+                            .header("X-Account-Id", accountId) 
+                            .header("X-User-Role", role)
+                            .header("X-Correlation-Id", correlationId)
+                            .build();
+                        
+                        return chain.filter(exchange.mutate().request(modifiedRequest).build());
+                    });
 
             }catch (Exception e){
                 log.error("[GATEWAY] Invalid token for request {} {}", method, path, e);

@@ -27,6 +27,7 @@ public class RabbitMQConfig {
     private String password;
 
     public static final String QUEUE_PROFILE_ACCOUNT_CREATE = "q.profile.account.create";
+    public static final String QUEUE_PROFILE_ACCOUNT_STATUS_CHANGE = "q.profile.account.status-change";
 
     @Bean
     public TopicExchange omsExchange() {
@@ -39,10 +40,22 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue profileAccountStatusChangeQueue() {
+        return new Queue(QUEUE_PROFILE_ACCOUNT_STATUS_CHANGE, true);
+    }
+
+    @Bean
     public Binding bindingProfileAccountCreate(Queue profileAccountCreateQueue, TopicExchange omsExchange) {
         return BindingBuilder.bind(profileAccountCreateQueue)
                 .to(omsExchange)
                 .with(RabbitMQConstants.IDENTITY_ACCOUNT_CREATED);
+    }
+
+    @Bean
+    public Binding bindingProfileAccountStatusChange(Queue profileAccountStatusChangeQueue, TopicExchange omsExchange) {
+        return BindingBuilder.bind(profileAccountStatusChangeQueue)
+                .to(omsExchange)
+                .with(RabbitMQConstants.IDENTITY_ACCOUNT_STATUS_CHANGED);
     }
 
     @Bean

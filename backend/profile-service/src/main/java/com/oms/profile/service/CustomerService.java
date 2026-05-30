@@ -52,6 +52,7 @@ public class CustomerService {
                 .id(customer.getId())
                 .fullname(customer.getFullname())
                 .phone(customer.getPhone())
+                .email(customer.getEmail())
                 .avatarUrl(customer.getAvatarUrl())
                 .gender(customer.getGender() != null ? customer.getGender().name() : null)
                 .dateOfBirth(customer.getDateOfBirth() != null ? customer.getDateOfBirth().toString() : null)
@@ -112,13 +113,7 @@ public class CustomerService {
     @Transactional(readOnly = true)
     public List<CustomerProfileResponse> getAllCustomers() {
         return customerRepository.findAll().stream()
-                .map(customer -> CustomerProfileResponse.builder()
-                        .fullname(customer.getFullname())
-                        .phone(customer.getPhone())
-                        .avatarUrl(customer.getAvatarUrl())
-                        .gender(customer.getGender() != null ? customer.getGender().name() : null)
-                        .dateOfBirth(customer.getDateOfBirth() != null ? customer.getDateOfBirth().toString() : null)
-                        .build())
+                .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
     @Transactional

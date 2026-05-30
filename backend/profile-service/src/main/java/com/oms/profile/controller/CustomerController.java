@@ -65,6 +65,7 @@ public class CustomerController {
                 .build());
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<ApiResponse<List<CustomerProfileResponse>>> getAllCustomers() {
         return ResponseEntity.ok(ApiResponse.<List<CustomerProfileResponse>>builder()

@@ -3,6 +3,7 @@ package com.oms.notificationservice.listener;
 import com.oms.notificationservice.config.RabbitMQConfig;
 import com.oms.notificationservice.client.OrderClient;
 import com.oms.notificationservice.dto.AccountCreatedEvent;
+import com.oms.notificationservice.dto.AccountStatusChangedEvent;
 import com.oms.notificationservice.dto.DeliveryUpdatePayload;
 import com.oms.notificationservice.dto.NotificationEvent;
 import com.oms.notificationservice.entity.UserReplicated;
@@ -193,5 +194,28 @@ public class NotificationListener {
         } catch (Exception e) {
             log.error("Lỗi khi xử lý thông báo cảnh báo tồn kho cho admin: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Lắng nghe sự kiện thay đổi trạng thái tài khoản để gửi thông báo email cho người dùng
+     */
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_NOTIFICATION_ACCOUNT_STATUS_CHANGE)
+    public void handleAccountStatusChanged(AccountStatusChangedEvent event) {
+        log.info("Nhận sự kiện thay đổi trạng thái tài khoản: {} thành {}", event.getAccountId(), event.getStatus());
+
+        userReplicatedRepository.findByAccountId(event.getAccountId()).ifPresentOrElse(user -> {
+            boolean isBanned = "BANNED".equalsIgnoreCase(event.getStatus());
+            String subject = isBanned ? "Thông báo khoá tài khoản OMS" : "Thông báo kích hoạt lại tài khoản OMS";
+            String body = isBanned 
+                    ? String.format("Chào %s,\n\nTài khoản OMS của bạn đã bị khoá bởi Quản trị viên hệ thống.\nNếu bạn cho rằng đây là một sự nhầm lẫn, vui lòng liên hệ với bộ phận hỗ trợ khách hàng để được giải đáp.\n\nTrân trọng,\nĐội ngũ OMS", user.getFullname())
+                    : String.format("Chào %s,\n\nTài khoản OMS của bạn đã được kích hoạt lại thành công.\nBây giờ bạn có thể đăng nhập hệ thống và thực hiện các dịch vụ như bình thường.\n\nTrân trọng,\nĐội ngũ OMS", user.getFullname());
+
+            try {
+                emailService.sendEmail(user.getEmail(), subject, body);
+                log.info("Đã gửi email thông báo trạng thái tài khoản tới {} thành công.", user.getEmail());
+            } catch (Exception e) {
+                log.error("Lỗi khi gửi email thông báo trạng thái tài khoản: {}", e.getMessage());
+            }
+        }, () -> log.warn("Không tìm thấy thông tin email cho user {} trong DB nội bộ để gửi thông báo thay đổi trạng thái.", event.getAccountId()));
     }
 }

@@ -12,6 +12,7 @@ public enum IdentityErrorCode implements ErrorCode {
     USER_EXISTED(HttpStatus.CONFLICT, "Tên đăng nhập này đã tồn tại trên hệ thống"),
     EMAIL_EXISTED(HttpStatus.CONFLICT, "Email này đã được sử dụng bởi một tài khoản khác"),
     RABBITMQ_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi gửi tin nhắn đồng bộ dữ liệu"),
+    ACCOUNT_BANNED(HttpStatus.FORBIDDEN, "Tài khoản của bạn đã bị khoá trên hệ thống"),
     UNCATEGORIZED_EXCEPTION(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống không xác định");
 
     private final HttpStatus httpStatus;

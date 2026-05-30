@@ -1,4 +1,4 @@
-package com.oms.identityservice.dto;
+package com.oms.notificationservice.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,10 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AccountResponse {
-    private String id;
-    private String username;
-    private String email;
-    private String role;
+public class AccountStatusChangedEvent {
+    private String accountId;
     private String status;
 }

@@ -11,6 +11,7 @@ public class CustomerProfileResponse {
     private String id;
     private String fullname;
     private String phone;
+    private String email;
     private String avatarUrl;
     private String gender;
     private String dateOfBirth;

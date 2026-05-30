@@ -2,6 +2,7 @@ package com.oms.profile.listener;
 
 
 import com.oms.profile.dto.AccountCreatedEvent;
+import com.oms.profile.dto.AccountStatusChangedEvent;
 import com.oms.profile.entity.Customer;
 import com.oms.profile.entity.Staff;
 import com.oms.profile.repository.CustomerRepository;
@@ -46,6 +47,7 @@ public class AccountEventListener {
             customer.setAccountId(event.getAccountId());
             customer.setFullname(event.getFullname());
             customer.setPhone(event.getPhone());
+            customer.setEmail(event.getEmail());
             customer.setActive(true);
 
             customerRepository.save(customer);
@@ -57,6 +59,7 @@ public class AccountEventListener {
             staff.setAccountId(event.getAccountId());
             staff.setFullname(event.getFullname());
             staff.setPhone(event.getPhone());
+            staff.setEmail(event.getEmail());
             staff.setEmployeeCode("NV-" + System.currentTimeMillis()); 
             staff.setActive(true);
         
@@ -80,5 +83,25 @@ public class AccountEventListener {
                 .processedAt(LocalDateTime.now())
                 .build();
         processedEventRepository.save(processedEvent);
+    }
+
+    @RabbitListener(queues = com.oms.profile.config.RabbitMQConfig.QUEUE_PROFILE_ACCOUNT_STATUS_CHANGE)
+    @Transactional
+    public void handleAccountStatusChanged(AccountStatusChangedEvent event) {
+        log.info("Nhận sự kiện thay đổi trạng thái tài khoản: {} -> {}", event.getAccountId(), event.getStatus());
+
+        boolean isActive = "ACTIVE".equalsIgnoreCase(event.getStatus());
+
+        customerRepository.findByAccountId(event.getAccountId()).ifPresent(customer -> {
+            customer.setActive(isActive);
+            customerRepository.save(customer);
+            log.info("Đã cập nhật trạng thái hoạt động hồ sơ Khách hàng {} thành: {}", customer.getId(), isActive);
+        });
+
+        staffRepository.findByAccountId(event.getAccountId()).ifPresent(staff -> {
+            staff.setActive(isActive);
+            staffRepository.save(staff);
+            log.info("Đã cập nhật trạng thái hoạt động hồ sơ Nhân viên {} thành: {}", staff.getId(), isActive);
+        });
     }
 }

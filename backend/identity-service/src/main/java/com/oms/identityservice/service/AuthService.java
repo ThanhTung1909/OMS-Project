@@ -5,8 +5,12 @@ import com.oms.identityservice.dto.AccountCreatedEvent;
 import com.oms.identityservice.dto.AuthResponse;
 import com.oms.identityservice.dto.LoginRequest;
 import com.oms.identityservice.dto.RegisterRequest;
+import com.oms.identityservice.dto.AccountResponse;
+import com.oms.identityservice.dto.AccountStatusChangedEvent;
 import com.oms.identityservice.entity.Account;
 import com.oms.common.AppException;
+import java.util.List;
+import java.util.stream.Collectors;
 import com.oms.identityservice.exception.IdentityErrorCode;
 import com.oms.identityservice.entity.Enum.AccountStatus;
 import com.oms.identityservice.entity.Enum.Role;
@@ -59,6 +63,7 @@ public class AuthService {
         acc.setUsername(r.getUsername());
         acc.setPasswordHash(encoder.encode(r.getPassword()));
         acc.setEmail(r.getEmail());
+        acc.setFullName(r.getFullName());
         acc.setRole(Role.USER);
         acc.setStatus(AccountStatus.ACTIVE);
         
@@ -103,6 +108,10 @@ public class AuthService {
 
         if(!encoder.matches(r.getPassword(), acc.getPasswordHash()))
             throw new AppException(IdentityErrorCode.INVALID_CREDENTIALS);
+
+        if (acc.getStatus() == AccountStatus.BANNED) {
+            throw new AppException(IdentityErrorCode.ACCOUNT_BANNED);
+        }
 
         String token= jwt.generateToken(acc);
 
@@ -231,5 +240,67 @@ public class AuthService {
         accountRepository.save(acc);
 
         log.info("Password successfully changed for account ID: {}", accountId);
+    }
+
+    @Transactional
+    public AccountResponse changeAccountStatus(String id, AccountStatus status) {
+        Account acc = accountRepository.findById(id)
+                .orElseThrow(() -> new AppException(IdentityErrorCode.USER_NOT_FOUND));
+
+        acc.setStatus(status);
+        acc = accountRepository.save(acc);
+
+        // Redis cache sync for real-time ban checking at API Gateway
+        String redisKey = "ACCOUNT_BANNED_STATUS:" + id;
+        if (status == AccountStatus.BANNED) {
+            redisTemplate.opsForValue().set(redisKey, "BANNED");
+            log.info("Banned user saved to Redis cache: {}", id);
+        } else {
+            redisTemplate.delete(redisKey);
+            log.info("Unbanned user removed from Redis cache: {}", id);
+        }
+
+        // Transactional Outbox status change event
+        try {
+            AccountStatusChangedEvent event = AccountStatusChangedEvent.builder()
+                    .accountId(acc.getId())
+                    .status(acc.getStatus().name())
+                    .build();
+
+            String payload = objectMapper.writeValueAsString(event);
+
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .aggregateId(acc.getId())
+                    .type(RabbitMQConstants.IDENTITY_ACCOUNT_STATUS_CHANGED)
+                    .payload(payload)
+                    .status(OutboxStatus.PENDING)
+                    .build();
+
+            outboxEventRepository.save(outboxEvent);
+            log.info("Saved AccountStatusChangedEvent to Outbox for accountId: {} with status: {}", acc.getId(), status);
+        } catch (Exception e) {
+            log.error("Failed to serialize and save outbox status change event: {}", e.getMessage());
+            throw new AppException(IdentityErrorCode.UNCATEGORIZED_EXCEPTION);
+        }
+
+        return AccountResponse.builder()
+                .id(acc.getId())
+                .username(acc.getUsername())
+                .email(acc.getEmail())
+                .role(acc.getRole().name())
+                .status(acc.getStatus().name())
+                .build();
+    }
+
+    public List<AccountResponse> getAccounts() {
+        return accountRepository.findAll().stream()
+                .map(acc -> AccountResponse.builder()
+                        .id(acc.getId())
+                        .username(acc.getUsername())
+                        .email(acc.getEmail())
+                        .role(acc.getRole().name())
+                        .status(acc.getStatus() != null ? acc.getStatus().name() : null)
+                        .build())
+                .collect(Collectors.toList());
     }
 }

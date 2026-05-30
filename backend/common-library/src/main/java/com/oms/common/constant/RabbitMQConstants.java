@@ -12,6 +12,7 @@ public class RabbitMQConstants {
     // Identity 
     public static final String IDENTITY_ACCOUNT_CREATED = "identity.account.created";
     public static final String IDENTITY_FORGOT_PASSWORD_REQUESTED = "identity.forgot_password.requested";
+    public static final String IDENTITY_ACCOUNT_STATUS_CHANGED = "identity.account.status_changed";
     
     // Payment 
     public static final String PAYMENT_COMMAND_CREATE = "payment.command.create";

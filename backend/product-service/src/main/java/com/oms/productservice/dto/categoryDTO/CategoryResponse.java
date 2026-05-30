@@ -1,4 +1,4 @@
-package com.oms.identityservice.dto;
+package com.oms.productservice.dto.categoryDTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,10 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AccountResponse {
+public class CategoryResponse {
     private String id;
-    private String username;
-    private String email;
-    private String role;
-    private String status;
+    private String name;
 }

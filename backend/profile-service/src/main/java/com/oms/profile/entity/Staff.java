@@ -30,6 +30,9 @@ public class Staff {
     @Column(unique = true)
     private String phone;
 
+    @Column(unique = true)
+    private String email;
+
     @Column(name = "employee_code", nullable = false, unique = true)
     private String employeeCode;
 
